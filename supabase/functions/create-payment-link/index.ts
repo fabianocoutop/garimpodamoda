@@ -31,7 +31,41 @@ serve(async (req) => {
 
     if (dbError) throw new Error('Falha ao reservar estoque do item: ' + dbError.message);
 
-    // 2. Aciona o AbacatePay via API privada
+    // 1.5. Recupera os dados REAIS do Cliente salvos via RPC
+    const { data: pedidoData, error: dbPedidoError } = await supabaseClient
+      .from('pedidos')
+      .select('clientes(*)')
+      .eq('id', pedidoId)
+      .single();
+
+    if (dbPedidoError || !pedidoData || !pedidoData.clientes) {
+       throw new Error('Falha ao buscar dados do cliente vinculado ao pedido.');
+    }
+    
+    const cliente = pedidoData.clientes;
+
+    // 2. Cria o Cliente Oficial no AbacatePay (Baseado no form do site)
+    const customerReq = await fetch('https://api.abacatepay.com/v1/customer/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ABACATEPAY_KEY}`
+      },
+      body: JSON.stringify({
+        name: cliente.nome,
+        email: cliente.email,
+        taxId: cliente.cpf,
+        cellphone: cliente.telefone.replace(/\D/g, '') // Remove ( ) - para a API
+      })
+    });
+    
+    const customerRes = await customerReq.json();
+    if (!customerRes.data || !customerRes.data.id) {
+       throw new Error('Falha ao gerar o Cliente no AbacatePay: ' + JSON.stringify(customerRes));
+    }
+    const dynamicCustomerId = customerRes.data.id;
+
+    // 3. Aciona o AbacatePay via API privada gerando a fatura
     const abacateReq = await fetch('https://api.abacatepay.com/v1/billing/create', {
       method: 'POST',
       headers: {
@@ -52,7 +86,7 @@ serve(async (req) => {
         ],
         returnUrl: "https://fabianocoutop.github.io/garimpodamoda/",
         completionUrl: "https://fabianocoutop.github.io/garimpodamoda/",
-        customerId: "cust_RbQYpPXMxTFuPhUtA5UzY4qw" // Cliente genérico previamente gerado pela API para contornar a ausência de CPF
+        customerId: dynamicCustomerId // CLIENTE DINÂMICO
       })
     });
 

@@ -108,6 +108,49 @@ function renderizarVitrine(produtos) {
     });
 }
 
+// ----------------- MÁSCARAS E CEP ----------------- //
+
+function maskCpf(i) {
+    let v = i.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+    i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskPhone(i) {
+    let v = i.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length <= 10) {
+        i.value = v.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+    } else {
+        i.value = v.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+    }
+}
+
+function maskCep(i) {
+    let v = i.value.replace(/\D/g, "");
+    if (v.length > 8) v = v.slice(0, 8);
+    i.value = v.replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+async function buscarCep(cepFormatado) {
+    const cep = cepFormatado.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    
+    try {
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+            document.getElementById('rua').value = data.logradouro || '';
+            document.getElementById('bairro').value = data.bairro || '';
+            document.getElementById('cidade').value = data.localidade || '';
+            document.getElementById('estado').value = data.uf || '';
+            document.getElementById('numero').focus();
+        }
+    } catch(e) {
+        console.error("Erro viaCep:", e);
+    }
+}
+
 // ----------------- CHECKOUT LOGIC ----------------- //
 
 function abrirCheckout(id, titulo, preco, imagem) {
@@ -149,15 +192,31 @@ async function processarPedido(event) {
     const idProduto = document.getElementById('produto-id-selecionado').value;
     const nome = document.getElementById('nome').value;
     const insta = document.getElementById('instagram').value;
-    const endereco = document.getElementById('endereco').value;
+    const email = document.getElementById('email').value;
+    const cpf = document.getElementById('cpf').value;
+    const telefone = document.getElementById('telefone').value;
+    const cep = document.getElementById('cep').value;
+    const rua = document.getElementById('rua').value;
+    const numero = document.getElementById('numero').value;
+    const bairro = document.getElementById('bairro').value;
+    const cidade = document.getElementById('cidade').value;
+    const estado = document.getElementById('estado').value;
+
     const tituloProdutoSelecionado = document.getElementById('produto-titulo-selecionado').value;
     const precoProdutoSelecionado = parseFloat(document.getElementById('produto-preco-selecionado').value);
+
+    // Validação mínima de CPF e Celular
+    const cpfClean = cpf.replace(/\D/g, "");
+    if (cpfClean.length !== 11) {
+        erroDisplay.innerHTML = "CPF Inválido."; erroDisplay.style.display = 'block'; btn.innerHTML = 'Ir para Pagamento (AbacatePay)'; btn.disabled = false; return;
+    }
 
     try {
         if (!useMockData) {
             // FLUXO REAL COM BANCO DE DADOS E NUVEM
             // 1 + 2. Processamento hiper-seguro via RPC
-            const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', { p_nome: nome, p_instagram: insta, p_endereco: endereco, p_produto_id: parseInt(idProduto) });
+            const rpcPayload = { p_nome: nome, p_instagram: insta, p_email: email, p_cpf: cpfClean, p_telefone: telefone, p_cep: cep, p_rua: rua, p_numero: numero, p_bairro: bairro, p_cidade: cidade, p_estado: estado, p_produto_id: parseInt(idProduto) };
+            const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', rpcPayload);
             if (rpcError) throw new Error("A Base de Dados recusou: " + rpcError.message);
              
              // 3. Invoca a Função de Gateway Edge (Vai processar a chave AbacatePay blindada)
