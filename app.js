@@ -156,7 +156,9 @@ async function processarPedido(event) {
     try {
         if (!useMockData) {
             // FLUXO REAL COM BANCO DE DADOS E NUVEM
-            // 1 + 2. Processamento hiper-seguro via RPC`n             const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', { p_nome: nome, p_instagram: insta, p_endereco: endereco, p_produto_id: idProduto });`n             if (rpcError) throw new Error("A Base de Dados recusou: " + rpcError.message);
+            // 1 + 2. Processamento hiper-seguro via RPC
+            const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', { p_nome: nome, p_instagram: insta, p_endereco: endereco, p_produto_id: parseInt(idProduto) });
+            if (rpcError) throw new Error("A Base de Dados recusou: " + rpcError.message);
              
              // 3. Invoca a Função de Gateway Edge (Vai processar a chave AbacatePay blindada)
              const resEdge = await _supabase.functions.invoke('create-payment-link', {
@@ -173,25 +175,22 @@ async function processarPedido(event) {
              
              // 4. Redireciona o usuário para o PIX / Checkout nativo
              window.location.href = checkoutUrl;
+             return; // Para a execução aqui — o navegador vai redirecionar
 
         } else {
             // FLUXO MOCK
             const prod = mockProdutos.find(p => p.id == idProduto);
             if (prod) prod.disponivel = false; // Torna indisponível visualmente
+
+            // Simular o tempo de geração do link no AbacatePay
+            setTimeout(() => {
+                alert('A peça foi reservada e você agora seria redirecionada para a página do ABACATEPAY para realizar o Pix/Cartão!');
+                fecharCheckout();
+                carregarProdutos();
+                btn.innerHTML = 'Ir para Pagamento (AbacatePay)';
+                btn.disabled = false;
+            }, 1500);
         }
-        
-        // Simular o tempo de geração do link no AbacatePay
-        setTimeout(() => {
-            alert('A peça foi reservada e você agora seria redirecionada para a página do ABACATEPAY para realizar o Pix/Cartão!');
-            fecharCheckout();
-            
-            // Recarrega o grid para mostrar que a peça consta ' Vendida / Paga'
-            carregarProdutos();
-            
-            // Reset Botão se a pessoa voltar do link de pagamento
-            btn.innerHTML = 'Ir para Pagamento (AbacatePay)';
-            btn.disabled = false;
-        }, 1500);
 
     } catch (e) {
         console.error("Houve erro ao processar: ", e);
