@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
-// A sua Chave Dev atual do AbacatePay! (Em ambiente final o ideal é ser configurada dentro do painel do Supabase como Secrets Vault)
-const ABACATEPAY_KEY = Deno.env.get('ABACATEPAY_KEY') || 'abc_dev_cYubUxyRrQb0P650GpxcydqB';
-
+// A sua Chave de Produção será lida do Cofre do Supabase (Secrets Vault), garantindo total criptografia!
+const ABACATEPAY_KEY = Deno.env.get('ABACATEPAY_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
