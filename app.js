@@ -1,6 +1,6 @@
 // Variáveis do Supabase do Projeto Garimpo da Moda
 const SUPABASE_URL = 'https://rjjbxpssymaauqzpooig.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_hHYVuolaT64VJjQAORY3Vw_2lNdNV7p';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqamJ4cHNzeW1hYXVxenBvb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjQzMDcsImV4cCI6MjA5MDc0MDMwN30.595t4Df-jcn2JkZhKWVgb5E7pOjv2hj7_5eAba3PidQ';
 
 let _supabase = null;
 let useMockData = false; // Fluxo 100% autêntico via Cloud agora!
