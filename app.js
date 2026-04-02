@@ -156,13 +156,7 @@ async function processarPedido(event) {
     try {
         if (!useMockData) {
             // FLUXO REAL COM BANCO DE DADOS E NUVEM
-            // 1. Cadastra Cliente (Retorna ID)
-             const resCliente = await _supabase.from('clientes').insert({ nome: nome, instagram: insta, endereco: endereco }).select();
-             const clienteId = resCliente.data[0].id;
-
-             // 2. Cria Pedido (Status: Pendente)
-             const resPedido = await _supabase.from('pedidos').insert({ cliente_id: clienteId, produto_id: idProduto, status_pagamento: 'pendente' }).select();
-             const pedidoId = resPedido.data[0].id;
+            // 1 + 2. Processamento hiper-seguro via RPC`n             const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', { p_nome: nome, p_instagram: insta, p_endereco: endereco, p_produto_id: idProduto });`n             if (rpcError) throw new Error("A Base de Dados recusou: " + rpcError.message);
              
              // 3. Invoca a Função de Gateway Edge (Vai processar a chave AbacatePay blindada)
              const resEdge = await _supabase.functions.invoke('create-payment-link', {
@@ -207,3 +201,4 @@ async function processarPedido(event) {
         btn.disabled = false;
     }
 }
+
