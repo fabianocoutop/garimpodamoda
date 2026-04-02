@@ -15,13 +15,11 @@ serve(async (req) => {
   }
 
   try {
-    // Configura o banco na nuvem
+    // Configura o banco na nuvem usando SERVICE_ROLE (Poderes completos de Administrador) para poder baixar estoque
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
     const reqData = await req.json()
     const { idProduto, pedidoId, titulo, precoCents } = reqData
 
