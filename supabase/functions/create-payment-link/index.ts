@@ -32,7 +32,7 @@ serve(async (req) => {
     if (dbError) throw new Error('Falha ao reservar estoque do item: ' + dbError.message);
 
     // 2. Aciona o AbacatePay via API privada
-    const abacateReq = await fetch('https://api.abacatepay.com/v1/billing', {
+    const abacateReq = await fetch('https://api.abacatepay.com/v1/billing/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,8 +50,9 @@ serve(async (req) => {
             price: precoCents // O AbacatePay opera calculando centavos. Ex: 89.90 vira 8990
           }
         ],
-        returnUrl: "https://seu-github-pages-quando-tiver.com/sucesso",
-        completionUrl: "https://seu-github-pages-quando-tiver.com/sucesso"
+        returnUrl: "https://fabianocoutop.github.io/garimpodamoda/",
+        completionUrl: "https://fabianocoutop.github.io/garimpodamoda/",
+        customerId: "cust_RbQYpPXMxTFuPhUtA5UzY4qw" // Cliente genérico previamente gerado pela API para contornar a ausência de CPF
       })
     });
 
