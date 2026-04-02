@@ -40,7 +40,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         frequency: "ONE_TIME",
-        methods: ["PIX", "CREDIT_CARD"],
+        methods: ["PIX"],
         products: [
           {
             externalId: String(idProduto),
