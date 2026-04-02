@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garimpo da Moda | Brechó Exclusivo</title>
+    <!-- Fontes do Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Estilo Principal -->
+    <link rel="stylesheet" href="style.css">
+    <!-- SDK Supabase (Conforme Skill do Projeto) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- Cabeçalho -->
+    <header class="main-header">
+        <div class="logo-container">
+            <img src="img/logo.jpg" alt="Logo Garimpo da Moda" class="logo">
+        </div>
+        <p class="subtitle">Peças únicas. Curadoria exclusiva.</p>
+    </header>
+
+    <!-- Vitrine de Produtos -->
+    <main class="container">
+        <section id="vitrine" class="product-grid">
+            <!-- Os produtos serão injetados aqui via app.js -->
+            <div class="loading">Carregando as peças incríveis de hoje...</div>
+        </section>
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="main-footer">
+        <p>&copy; 2026 Garimpo da Moda. Todos os direitos reservados.</p>
+        <p>Enviamos para todo o Brasil ❤️</p>
+    </footer>
+
+    <!-- Overlay e Modal de Checkout (Oculto por padrão) -->
+    <div id="checkout-overlay" class="overlay" style="display: none;">
+        <div class="modal">
+            <button class="close-btn" onclick="fecharCheckout()">&times;</button>
+            
+            <div class="modal-header">
+                <h2>Quase lá! ✨</h2>
+                <p>Preencha os dados abaixo para garantir a sua peça (lembre-se, ela é única!). Após o pagamento, ela sairá da vitrine.</p>
+            </div>
+            
+            <!-- Resumo do Produto Selecionado -->
+            <div class="product-summary" id="product-summary">
+                <!-- Informações Injetadas pelo app.js -->
+            </div>
+
+            <!-- Formulário -->
+            <form id="checkout-form" onsubmit="processarPedido(event)">
+                <input type="hidden" id="produto-id-selecionado">
+                <input type="hidden" id="produto-titulo-selecionado">
+                <input type="hidden" id="produto-preco-selecionado">
+                
+                <div class="input-group">
+                    <label for="nome">Como devemos te chamar?</label>
+                    <input type="text" id="nome" placeholder="Seu nome completo" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="instagram">Seu Instagram (para acompanhamento):</label>
+                    <input type="text" id="instagram" placeholder="@seu.usuario" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="endereco">Onde devemos entregar?</label>
+                    <textarea id="endereco" rows="3" placeholder="Rua, Número, Complemento, Bairro, Cidade, CEP - Estado" required></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" id="btn-finalizar">
+                    Ir para Pagamento (AbacatePay)
+                </button>
+                <div id="checkout-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script src="app.js"></script>
+
+</body>
+</html>
