@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garimpo da Moda | Brechó Exclusivo</title>
+    <title>Garimpo da Moda | Bazar Exclusivo</title>
     <!-- Fontes do Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- SDK Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=4" defer></script>
+    <script src="app.js?v=6" defer></script>
 </head>
 <body>
 
@@ -23,6 +23,15 @@
         </div>
         <p class="subtitle">Peças únicas. Curadoria exclusiva.</p>
     </header>
+
+    <!-- Botão Flutuante do Carrinho -->
+    <button class="cart-float-btn" onclick="toggleCarrinho()" aria-label="Abrir carrinho">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        <span id="cart-badge" class="cart-badge" style="display:none;">0</span>
+    </button>
 
     <!-- Vitrine de Produtos -->
     <main class="container">
@@ -38,6 +47,27 @@
         <p>Enviamos para todo o Brasil ❤️</p>
     </footer>
 
+    <!-- Sidebar do Carrinho -->
+    <div id="cart-overlay" class="cart-overlay" style="display:none;" onclick="fecharCarrinho()"></div>
+    <aside id="cart-sidebar" class="cart-sidebar">
+        <div class="cart-header">
+            <h2>Seu Carrinho</h2>
+            <button class="close-btn" onclick="fecharCarrinho()">&times;</button>
+        </div>
+        <div id="cart-items" class="cart-items">
+            <p class="cart-empty">Seu carrinho está vazio.</p>
+        </div>
+        <div id="cart-footer" class="cart-footer" style="display:none;">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cart-total-value" class="price">R$ 0,00</span>
+            </div>
+            <button class="btn-primary" onclick="abrirCheckoutDoCarrinho()">
+                Finalizar Compra
+            </button>
+        </div>
+    </aside>
+
     <!-- Overlay e Modal de Checkout (Oculto por padrão) -->
     <div id="checkout-overlay" class="overlay" style="display: none;">
         <div class="modal">
@@ -45,19 +75,16 @@
             
             <div class="modal-header">
                 <h2>Quase lá! ✨</h2>
-                <p>Preencha os dados abaixo para garantir a sua peça (lembre-se, ela é única!). Após o pagamento, ela sairá da vitrine.</p>
+                <p>Preencha os dados abaixo para garantir suas peças. Após o pagamento, elas sairão da vitrine.</p>
             </div>
-            
-            <!-- Resumo do Produto Selecionado -->
+
+            <!-- Resumo das Peças do Carrinho -->
             <div class="product-summary" id="product-summary">
                 <!-- Informações Injetadas pelo app.js -->
             </div>
 
             <!-- Formulário -->
             <form id="checkout-form" onsubmit="processarPedido(event)">
-                <input type="hidden" id="produto-id-selecionado">
-                <input type="hidden" id="produto-titulo-selecionado">
-                <input type="hidden" id="produto-preco-selecionado">
                 
                 <div class="input-group">
                     <label for="nome">Como devemos te chamar?</label>
@@ -108,9 +135,6 @@
             </form>
         </div>
     </div>
-
-    <!-- Script Principal (Cache-busted) -->
-    <script src="app.js?v=3"></script>
 
 </body>
 </html>

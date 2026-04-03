@@ -3,7 +3,71 @@ const SUPABASE_URL = 'https://rjjbxpssymaauqzpooig.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqamJ4cHNzeW1hYXVxenBvb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjQzMDcsImV4cCI6MjA5MDc0MDMwN30.595t4Df-jcn2JkZhKWVgb5E7pOjv2hj7_5eAba3PidQ';
 
 let _supabase = null;
-let useMockData = false; // Fluxo 100% autêntico via Cloud agora!
+let useMockData = true; // Voltamos ao modo Mock para reservas manuais por enquanto
+
+// ---- CARRINHO DE COMPRAS ---- //
+let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+let produtosCarregados = [];
+
+function salvarCarrinho() {
+    localStorage.setItem('carrinho', JSON.stringify(carrinho));
+}
+
+function adicionarAoCarrinho(id) {
+    const produto = produtosCarregados.find(p => p.id === id);
+    if (!produto || !produto.disponivel) return;
+    if (estaNoCarrinho(id)) return;
+    carrinho.push({
+        id: produto.id,
+        titulo: produto.titulo,
+        preco: produto.preco,
+        imagem_url: produto.imagem_url,
+        tamanho: produto.tamanho
+    });
+    salvarCarrinho();
+    atualizarBadgeCarrinho();
+    renderizarVitrine(produtosCarregados);
+    renderizarCarrinhoSidebar();
+}
+
+function removerDoCarrinho(id) {
+    carrinho = carrinho.filter(item => item.id !== id);
+    salvarCarrinho();
+    atualizarBadgeCarrinho();
+    renderizarVitrine(produtosCarregados);
+    renderizarCarrinhoSidebar();
+}
+
+function limparCarrinho() {
+    carrinho = [];
+    salvarCarrinho();
+    atualizarBadgeCarrinho();
+}
+
+function estaNoCarrinho(id) {
+    return carrinho.some(item => item.id === id);
+}
+
+function totalCarrinho() {
+    return carrinho.reduce((sum, item) => sum + item.preco, 0);
+}
+
+function atualizarBadgeCarrinho() {
+    const badge = document.getElementById('cart-badge');
+    if (!badge) return;
+    badge.textContent = carrinho.length;
+    badge.style.display = carrinho.length > 0 ? 'flex' : 'none';
+}
+
+function validarCarrinho(produtos) {
+    const idsDisponiveis = new Set(produtos.filter(p => p.disponivel).map(p => p.id));
+    const tamanhoOriginal = carrinho.length;
+    carrinho = carrinho.filter(item => idsDisponiveis.has(item.id));
+    if (carrinho.length !== tamanhoOriginal) {
+        salvarCarrinho();
+    }
+    atualizarBadgeCarrinho();
+}
 
 // Dados fictícios (Gerados baseados na IA)
 let mockProdutos = [
@@ -67,7 +131,9 @@ async function carregarProdutos() {
         produtos = data;
     }
 
+    produtosCarregados = produtos;
     renderizarVitrine(produtos);
+    validarCarrinho(produtos);
 }
 
 // Exibir na tela (HTML)
@@ -76,14 +142,22 @@ function renderizarVitrine(produtos) {
     vitrine.innerHTML = '';
 
     if (produtos.length === 0) {
-         vitrine.innerHTML = `<div class="loading">Infelizmente nosso estoque zrou! Acompanhe o instagram para novidades.</div>`;
+         vitrine.innerHTML = `<div class="loading">Infelizmente nosso estoque zerou! Acompanhe o instagram para novidades.</div>`;
          return;
     }
 
     produtos.forEach(peça => {
         const precoFormatado = peça.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const disponivelTxt = peça.disponivel ? "Comprar Agora" : "Vendida / Paga";
-        
+
+        let btnHtml;
+        if (!peça.disponivel) {
+            btnHtml = `<button class="btn-primary" disabled>Vendida / Paga</button>`;
+        } else if (estaNoCarrinho(peça.id)) {
+            btnHtml = `<button class="btn-in-cart" onclick="removerDoCarrinho(${peça.id})">&#10003; No Carrinho</button>`;
+        } else {
+            btnHtml = `<button class="btn-primary" onclick="adicionarAoCarrinho(${peça.id})">Adicionar ao Carrinho</button>`;
+        }
+
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
@@ -97,11 +171,7 @@ function renderizarVitrine(produtos) {
                 <div class="card-footer">
                     <span class="price">${precoFormatado}</span>
                 </div>
-                <button class="btn-primary" 
-                    ${!peça.disponivel ? 'disabled' : ''} 
-                    onclick="abrirCheckout(${peça.id}, '${peça.titulo}', ${peça.preco}, '${peça.imagem_url}')">
-                    ${disponivelTxt}
-                </button>
+                ${btnHtml}
             </div>
         `;
         vitrine.appendChild(card);
@@ -151,24 +221,84 @@ async function buscarCep(cepFormatado) {
     }
 }
 
+// ----------------- SIDEBAR DO CARRINHO ----------------- //
+
+function toggleCarrinho() {
+    const sidebar = document.getElementById('cart-sidebar');
+    if (sidebar.classList.contains('open')) {
+        fecharCarrinho();
+    } else {
+        abrirCarrinho();
+    }
+}
+
+function abrirCarrinho() {
+    document.getElementById('cart-sidebar').classList.add('open');
+    document.getElementById('cart-overlay').style.display = 'block';
+    renderizarCarrinhoSidebar();
+}
+
+function fecharCarrinho() {
+    document.getElementById('cart-sidebar').classList.remove('open');
+    document.getElementById('cart-overlay').style.display = 'none';
+}
+
+function renderizarCarrinhoSidebar() {
+    const container = document.getElementById('cart-items');
+    const footer = document.getElementById('cart-footer');
+
+    if (carrinho.length === 0) {
+        container.innerHTML = '<p class="cart-empty">Seu carrinho está vazio.</p>';
+        footer.style.display = 'none';
+        return;
+    }
+
+    footer.style.display = 'block';
+    container.innerHTML = carrinho.map(item => {
+        const precoFmt = item.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `
+        <div class="cart-item">
+            <img src="${item.imagem_url}" alt="${item.titulo}" class="cart-item-img">
+            <div class="cart-item-info">
+                <strong>${item.titulo}</strong>
+                <span class="tag-tamanho">${item.tamanho}</span>
+                <span class="price">${precoFmt}</span>
+            </div>
+            <button class="cart-item-remove" onclick="removerDoCarrinho(${item.id})" aria-label="Remover">&times;</button>
+        </div>`;
+    }).join('');
+
+    document.getElementById('cart-total-value').textContent =
+        totalCarrinho().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 // ----------------- CHECKOUT LOGIC ----------------- //
 
-function abrirCheckout(id, titulo, preco, imagem) {
+function abrirCheckoutDoCarrinho() {
+    if (carrinho.length === 0) return;
+    fecharCarrinho();
+
     document.getElementById('checkout-overlay').style.display = 'flex';
-    document.getElementById('produto-id-selecionado').value = id;
-    document.getElementById('produto-titulo-selecionado').value = titulo;
-    document.getElementById('produto-preco-selecionado').value = preco;
-    
-    // Atualiza resumo
-    const precoFormatado = preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('product-summary').innerHTML = `
-        <img src="${imagem}" class="summary-img">
-        <div>
-            <strong>${titulo}</strong>
-            <br>
-            <span class="price">${precoFormatado}</span>
-        </div>
-    `;
+
+    const summaryEl = document.getElementById('product-summary');
+    const total = totalCarrinho();
+    const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    summaryEl.innerHTML = carrinho.map(item => {
+        const pFmt = item.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `
+        <div class="summary-item">
+            <img src="${item.imagem_url}" class="summary-img">
+            <div>
+                <strong>${item.titulo}</strong><br>
+                <span class="price">${pFmt}</span>
+            </div>
+        </div>`;
+    }).join('') + `
+    <div class="summary-total">
+        <strong>Total (${carrinho.length} ${carrinho.length === 1 ? 'peça' : 'peças'}):</strong>
+        <span class="price">${totalFmt}</span>
+    </div>`;
 }
 
 function fecharCheckout() {
@@ -179,17 +309,16 @@ function fecharCheckout() {
 
 // Quando clicar em finalizar
 async function processarPedido(event) {
-    event.preventDefault(); // Evita recarregar a página
-    
+    event.preventDefault();
+
     const btn = document.getElementById('btn-finalizar');
     const erroDisplay = document.getElementById('checkout-error');
-    
+
     btn.innerHTML = 'Processando...';
     btn.disabled = true;
     erroDisplay.style.display = 'none';
 
     // Capturando dados do form
-    const idProduto = document.getElementById('produto-id-selecionado').value;
     const nome = document.getElementById('nome').value;
     const insta = document.getElementById('instagram').value;
     const email = document.getElementById('email').value;
@@ -202,61 +331,52 @@ async function processarPedido(event) {
     const cidade = document.getElementById('cidade').value;
     const estado = document.getElementById('estado').value;
 
-    const tituloProdutoSelecionado = document.getElementById('produto-titulo-selecionado').value;
-    const precoProdutoSelecionado = parseFloat(document.getElementById('produto-preco-selecionado').value);
-
-    // Validação mínima de CPF e Celular
+    // Validação mínima de CPF
     const cpfClean = cpf.replace(/\D/g, "");
     if (cpfClean.length !== 11) {
-        erroDisplay.innerHTML = "CPF Inválido."; erroDisplay.style.display = 'block'; btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)'; btn.disabled = false; return;
+        erroDisplay.innerHTML = "CPF Inválido.";
+        erroDisplay.style.display = 'block';
+        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
+        btn.disabled = false;
+        return;
+    }
+
+    if (carrinho.length === 0) {
+        erroDisplay.innerHTML = "Seu carrinho está vazio.";
+        erroDisplay.style.display = 'block';
+        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
+        btn.disabled = false;
+        return;
     }
 
     try {
-        if (!useMockData) {
-            // FLUXO REAL COM BANCO DE DADOS E NUVEM
-            // 1 + 2. Processamento hiper-seguro via RPC
-            const rpcPayload = { p_nome: nome, p_instagram: insta, p_email: email, p_cpf: cpfClean, p_telefone: telefone, p_cep: cep, p_rua: rua, p_numero: numero, p_bairro: bairro, p_cidade: cidade, p_estado: estado, p_produto_id: parseInt(idProduto) };
-            const { data: pedidoId, error: rpcError } = await _supabase.rpc('fechar_pedido', rpcPayload);
-            if (rpcError) throw new Error("A Base de Dados recusou: " + rpcError.message);
-             
-             // 3. Invoca a Função de Gateway Edge (Vai processar a chave AbacatePay blindada)
-             const resEdge = await _supabase.functions.invoke('create-payment-link', {
-                 body: { 
-                     idProduto: idProduto, 
-                     pedidoId: pedidoId, 
-                     titulo: tituloProdutoSelecionado,
-                     precoCents: Math.round(precoProdutoSelecionado * 100) 
-                 }
-             });
+        // FLUXO MOCK - Marcar todas as peças do carrinho como indisponíveis
+        const idsNoCarrinho = carrinho.map(item => item.id);
+        idsNoCarrinho.forEach(id => {
+            const prod = mockProdutos.find(p => p.id === id);
+            if (prod) prod.disponivel = false;
+        });
 
-             if (resEdge.error) throw new Error("Erro na geração do link de pagamento na Nuvem: " + resEdge.error.message);
-             const checkoutUrl = resEdge.data.paymentUrl;
-             
-             // 4. Redireciona o usuário para o PIX / Checkout nativo
-             window.location.href = checkoutUrl;
-             return; // Para a execução aqui — o navegador vai redirecionar
+        // TODO: Integração Mercado Pago
+        // - Criar preferência de pagamento com totalCarrinho() e itens do carrinho
+        // - Redirecionar para checkout do Mercado Pago
+        // - No callback de sucesso, criar registros no Supabase (clientes + pedidos)
 
-        } else {
-            // FLUXO MOCK
-            const prod = mockProdutos.find(p => p.id == idProduto);
-            if (prod) prod.disponivel = false; // Torna indisponível visualmente
-
-            // Simular o tempo de geração do link no AbacatePay
-            setTimeout(() => {
-                alert('A peça foi reservada e você agora seria redirecionada para a página de Pagamento Seguro para realizar o Pix/Cartão!');
-                fecharCheckout();
-                carregarProdutos();
-                btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
-                btn.disabled = false;
-            }, 1500);
-        }
+        setTimeout(() => {
+            const qtd = idsNoCarrinho.length;
+            alert(`RESERVA REALIZADA! ${qtd} ${qtd === 1 ? 'peça reservada' : 'peças reservadas'}. Entraremos em contato via Instagram para finalizar o envio.`);
+            limparCarrinho();
+            fecharCheckout();
+            carregarProdutos();
+            btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
+            btn.disabled = false;
+        }, 1500);
 
     } catch (e) {
-        console.error("Houve erro ao processar: ", e);
-        erroDisplay.innerHTML = "Ocorreu um erro interno na loja. Tente novamente mais tarde.";
+        console.error("Houve erro ao processar reserva: ", e);
+        erroDisplay.innerHTML = "Ocorreu um erro ao processar sua reserva. Tente novamente.";
         erroDisplay.style.display = 'block';
         btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
         btn.disabled = false;
     }
 }
-
