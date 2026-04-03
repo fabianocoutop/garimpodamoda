@@ -88,15 +88,18 @@ serve(async (req) => {
     const abacateRes = await abacateReq.json()
     console.log("Retorno do AbacatePay:", abacateRes)
     
-    // Trata a resposta assumindo o padrão da API.
     const paymentUrl = abacateRes.data?.url || abacateRes.url;
+    const billingId = abacateRes.data?.id || null; // bill_XXXXX
 
     if (!paymentUrl) {
          throw new Error("AbacatePay não retornou uma URL válida.");
     }
     
-    // Atualiza o pedido gerado com a url de cobrança
-    await supabaseClient.from('pedidos').update({ link_pagamento: paymentUrl }).eq('id', pedidoId);
+    // Salva link E billing_id para o webhook conseguir localizar o pedido
+    await supabaseClient.from('pedidos').update({ 
+      link_pagamento: paymentUrl,
+      billing_id: billingId 
+    }).eq('id', pedidoId);
 
     // Retorna a URL para o site Github Pages
     return new Response(JSON.stringify({ paymentUrl }), {
