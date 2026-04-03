@@ -280,8 +280,8 @@ body {
     top: 1.5rem;
     right: 1.5rem;
     z-index: 900;
-    background: var(--color-primary);
-    color: white;
+    background-color: var(--color-primary);
+    color: #FFFFFF;
     border: none;
     width: 52px;
     height: 52px;
@@ -294,7 +294,7 @@ body {
     transition: background 0.3s, transform 0.3s;
 }
 .cart-float-btn:hover {
-    background: var(--color-primary-dark);
+    background-color: var(--color-primary-dark);
     transform: scale(1.05);
 }
 
@@ -318,7 +318,10 @@ body {
 /* Overlay do Carrinho */
 .cart-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     background: rgba(0,0,0,0.3);
     z-index: 1050;
 }

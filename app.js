@@ -6,11 +6,12 @@ let _supabase = null;
 let useMockData = true; // Voltamos ao modo Mock para reservas manuais por enquanto
 
 // ---- CARRINHO DE COMPRAS ---- //
-let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+let carrinho = [];
+try { carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]'); } catch(e) { carrinho = []; }
 let produtosCarregados = [];
 
 function salvarCarrinho() {
-    localStorage.setItem('carrinho', JSON.stringify(carrinho));
+    try { localStorage.setItem('carrinho', JSON.stringify(carrinho)); } catch(e) { /* quota exceeded or disabled */ }
 }
 
 function adicionarAoCarrinho(id) {
