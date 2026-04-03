@@ -74,7 +74,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         frequency: "ONE_TIME",
-        methods: ["PIX"],
+        methods: ["PIX", "CARD"],
         products: [
           {
             externalId: `prod_${idProduto}_${Date.now()}`,
