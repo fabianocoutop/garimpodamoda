@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- SDK Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="app.js?v=9" defer></script>
+    <script src="app.js?v=10" defer></script>
 </head>
 <body>
 
@@ -109,12 +109,12 @@
                     <input type="email" id="email" placeholder="seuemail@exemplo.com" required>
                 </div>
 
-                <div class="input-group dual-column">
-                    <div style="flex:1;">
-                        <label for="cpf">CPF (Obrigatório para Nota e Entrega):</label>
+                <div class="input-group form-row">
+                    <div class="form-col">
+                        <label for="cpf">CPF:</label>
                         <input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpf(this)" required>
                     </div>
-                    <div style="flex:1;">
+                    <div class="form-col">
                         <label for="telefone">WhatsApp / Celular:</label>
                         <input type="text" id="telefone" placeholder="(11) 99999-9999" maxlength="15" oninput="maskPhone(this)" required>
                     </div>
@@ -123,15 +123,25 @@
                 <div class="input-group">
                     <label>Endereço de Entrega</label>
                     <div class="endereco-grid">
-                        <input type="text" id="cep" placeholder="CEP" maxlength="9" oninput="maskCep(this)" onblur="buscarCep(this.value)" required style="width: 100%; margin-bottom: 8px;">
-                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="text" id="rua" placeholder="Rua / Avenida" required style="flex: 3;">
-                            <input type="text" id="numero" placeholder="Número" required style="flex: 1;">
+                        <input type="text" id="cep" placeholder="CEP" maxlength="9" oninput="maskCep(this)" onblur="buscarCep(this.value)" required>
+                        <div class="form-row">
+                            <div class="form-col form-col-grow">
+                                <input type="text" id="rua" placeholder="Rua / Avenida" required>
+                            </div>
+                            <div class="form-col form-col-sm">
+                                <input type="text" id="numero" placeholder="Nº" required>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="bairro" placeholder="Bairro" required style="flex: 2;">
-                            <input type="text" id="cidade" placeholder="Cidade" required style="flex: 2;">
-                            <input type="text" id="estado" placeholder="UF" maxlength="2" required style="flex: 1; text-transform: uppercase;">
+                        <div class="form-row">
+                            <div class="form-col">
+                                <input type="text" id="bairro" placeholder="Bairro" required>
+                            </div>
+                            <div class="form-col">
+                                <input type="text" id="cidade" placeholder="Cidade" required>
+                            </div>
+                            <div class="form-col form-col-xs">
+                                <input type="text" id="estado" placeholder="UF" maxlength="2" required>
+                            </div>
                         </div>
                     </div>
                 </div>
