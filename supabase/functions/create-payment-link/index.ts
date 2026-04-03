@@ -77,11 +77,11 @@ serve(async (req) => {
         methods: ["PIX"],
         products: [
           {
-            externalId: String(idProduto),
+            externalId: `prod_${idProduto}_${Date.now()}`,
             name: titulo,
             description: "Garimpo da Moda - Peça Única Exclusiva",
             quantity: 1,
-            price: precoCents // O AbacatePay opera calculando centavos. Ex: 89.90 vira 8990
+            price: precoCents
           }
         ],
         returnUrl: "https://fabianocoutop.github.io/garimpodamoda/",
