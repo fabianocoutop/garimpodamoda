@@ -208,7 +208,7 @@ async function processarPedido(event) {
     // Validação mínima de CPF e Celular
     const cpfClean = cpf.replace(/\D/g, "");
     if (cpfClean.length !== 11) {
-        erroDisplay.innerHTML = "CPF Inválido."; erroDisplay.style.display = 'block'; btn.innerHTML = 'Ir para Pagamento (AbacatePay)'; btn.disabled = false; return;
+        erroDisplay.innerHTML = "CPF Inválido."; erroDisplay.style.display = 'block'; btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)'; btn.disabled = false; return;
     }
 
     try {
@@ -243,10 +243,10 @@ async function processarPedido(event) {
 
             // Simular o tempo de geração do link no AbacatePay
             setTimeout(() => {
-                alert('A peça foi reservada e você agora seria redirecionada para a página do ABACATEPAY para realizar o Pix/Cartão!');
+                alert('A peça foi reservada e você agora seria redirecionada para a página de Pagamento Seguro para realizar o Pix/Cartão!');
                 fecharCheckout();
                 carregarProdutos();
-                btn.innerHTML = 'Ir para Pagamento (AbacatePay)';
+                btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
                 btn.disabled = false;
             }, 1500);
         }
@@ -255,7 +255,7 @@ async function processarPedido(event) {
         console.error("Houve erro ao processar: ", e);
         erroDisplay.innerHTML = "Ocorreu um erro interno na loja. Tente novamente mais tarde.";
         erroDisplay.style.display = 'block';
-        btn.innerHTML = 'Ir para Pagamento (AbacatePay)';
+        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
         btn.disabled = false;
     }
 }
