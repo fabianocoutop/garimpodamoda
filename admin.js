@@ -5,6 +5,12 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let fotoSelecionada = null;
 
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+}
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await _supabase.auth.getSession();
@@ -192,7 +198,7 @@ async function carregarProdutos() {
         .order('created_at', { ascending: false });
 
     if (error) {
-        lista.innerHTML = `<div class="empty-state"><p>⚠️</p><span>Erro ao carregar: ${error.message}</span></div>`;
+        lista.innerHTML = `<div class="empty-state"><p>⚠️</p><span>Erro ao carregar: ${escapeHtml(error.message)}</span></div>`;
         return;
     }
 
@@ -213,14 +219,15 @@ async function carregarProdutos() {
 
         const card = document.createElement('div');
         card.className = 'product-admin-card' + (p.disponivel ? '' : ' unavailable');
+        const descResumo = p.descricao ? escapeHtml(p.descricao.substring(0, 60)) + (p.descricao.length > 60 ? '...' : '') : 'Sem descrição';
         card.innerHTML = `
-            <img src="${imgSrc}" class="product-admin-img" alt="${p.titulo}" onerror="this.src='https://via.placeholder.com/80x80?text=Sem+foto'">
+            <img src="${escapeHtml(imgSrc)}" class="product-admin-img" alt="${escapeHtml(p.titulo)}" onerror="this.src='https://via.placeholder.com/80x80?text=Sem+foto'">
             <div class="product-admin-info">
-                <h3>${p.titulo}</h3>
-                <p>${p.descricao ? p.descricao.substring(0, 60) + (p.descricao.length > 60 ? '...' : '') : 'Sem descrição'}</p>
+                <h3>${escapeHtml(p.titulo)}</h3>
+                <p>${descResumo}</p>
                 <div class="product-admin-price">${precoFmt}</div>
                 <div class="product-badges">
-                    <span class="badge-tamanho">${p.tamanho || 'U'}</span>
+                    <span class="badge-tamanho">${escapeHtml(p.tamanho || 'U')}</span>
                     ${statusBadge}
                 </div>
             </div>
@@ -229,7 +236,7 @@ async function carregarProdutos() {
                     ? `<button class="btn-action desativar" onclick="toggleDisponivel(${p.id}, false)">🔒 Ocultar</button>`
                     : `<button class="btn-action reativar" onclick="toggleDisponivel(${p.id}, true)">✅ Reativar</button>`
                 }
-                <button class="btn-action deletar" onclick="deletarProduto(${p.id}, '${p.imagem_url || ''}')">🗑 Apagar</button>
+                <button class="btn-action deletar" data-img="${escapeHtml(p.imagem_url || '')}" onclick="deletarProduto(${p.id}, this.dataset.img)">🗑 Apagar</button>
             </div>
         `;
         lista.appendChild(card);

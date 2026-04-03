@@ -70,6 +70,13 @@ function validarCarrinho(produtos) {
     atualizarBadgeCarrinho();
 }
 
+// ---- SEGURANÇA ---- //
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+}
+
 // Dados fictícios (Gerados baseados na IA)
 let mockProdutos = [
     {
@@ -162,13 +169,13 @@ function renderizarVitrine(produtos) {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <img src="${peça.imagem_url}" alt="${peça.titulo}" class="card-img" onerror="this.src='https://via.placeholder.com/300x400?text=Sem+Foto'">
+            <img src="${escapeHtml(peça.imagem_url)}" alt="${escapeHtml(peça.titulo)}" class="card-img" loading="lazy" onerror="this.src='https://via.placeholder.com/300x400?text=Sem+Foto'">
             <div class="card-body">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 class="card-title">${peça.titulo}</h3>
-                    <span class="tag-tamanho">${peça.tamanho}</span>
+                    <h3 class="card-title">${escapeHtml(peça.titulo)}</h3>
+                    <span class="tag-tamanho">${escapeHtml(peça.tamanho)}</span>
                 </div>
-                <p class="card-desc">${peça.descricao}</p>
+                <p class="card-desc">${escapeHtml(peça.descricao)}</p>
                 <div class="card-footer">
                     <span class="price">${precoFormatado}</span>
                 </div>
@@ -209,6 +216,7 @@ async function buscarCep(cepFormatado) {
     
     try {
         const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        if (!res.ok) return;
         const data = await res.json();
         if (!data.erro) {
             document.getElementById('rua').value = data.logradouro || '';
@@ -259,10 +267,10 @@ function renderizarCarrinhoSidebar() {
         const precoFmt = item.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         return `
         <div class="cart-item">
-            <img src="${item.imagem_url}" alt="${item.titulo}" class="cart-item-img">
+            <img src="${escapeHtml(item.imagem_url)}" alt="${escapeHtml(item.titulo)}" class="cart-item-img">
             <div class="cart-item-info">
-                <strong>${item.titulo}</strong>
-                <span class="tag-tamanho">${item.tamanho}</span>
+                <strong>${escapeHtml(item.titulo)}</strong>
+                <span class="tag-tamanho">${escapeHtml(item.tamanho)}</span>
                 <span class="price">${precoFmt}</span>
             </div>
             <button class="cart-item-remove" onclick="removerDoCarrinho(${item.id})" aria-label="Remover">&times;</button>
@@ -289,9 +297,9 @@ function abrirCheckoutDoCarrinho() {
         const pFmt = item.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         return `
         <div class="summary-item">
-            <img src="${item.imagem_url}" class="summary-img">
+            <img src="${escapeHtml(item.imagem_url)}" alt="${escapeHtml(item.titulo)}" class="summary-img">
             <div>
-                <strong>${item.titulo}</strong><br>
+                <strong>${escapeHtml(item.titulo)}</strong><br>
                 <span class="price">${pFmt}</span>
             </div>
         </div>`;

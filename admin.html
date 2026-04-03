@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' https://*.supabase.co https://via.placeholder.com blob: data:; connect-src https://*.supabase.co;">
     <title>Garimpo da Moda | Painel Administrativo</title>
+    <link rel="icon" href="img/logo.jpg" type="image/jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <style>
         :root {
             --bg: #0f0f13;
@@ -512,7 +514,7 @@
 
         <input type="email" id="admin-email" placeholder="Seu e-mail" autocomplete="email">
         <input type="password" id="admin-password" placeholder="Senha" autocomplete="current-password">
-        <button class="btn-login" onclick="fazerLogin()">Entrar no Painel</button>
+        <button class="btn-login" onclick="fazerLogin()" aria-label="Entrar no painel administrativo">Entrar no Painel</button>
 
         <div class="login-error" id="login-error"></div>
     </div>
@@ -529,7 +531,7 @@
                 <p id="admin-user-email">Carregando...</p>
             </div>
         </div>
-        <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+        <button class="btn-logout" onclick="fazerLogout()" aria-label="Sair do painel">Sair</button>
     </header>
 
     <div class="admin-content">
@@ -550,7 +552,7 @@
                         <p><strong>Clique para escolher a foto</strong></p>
                         <p>JPG, PNG ou WebP (máx. 5MB)</p>
                     </div>
-                    <img id="foto-preview" class="preview" src="" alt="" style="display:none;">
+                    <img id="foto-preview" class="preview" src="" alt="Pré-visualização da foto selecionada" style="display:none;">
                 </div>
             </div>
 
@@ -583,7 +585,7 @@
                 </div>
             </div>
 
-            <button class="btn-publish" id="btn-publicar" onclick="publicarProduto()">
+            <button class="btn-publish" id="btn-publicar" onclick="publicarProduto()" aria-label="Publicar peça na vitrine">
                 <span>🚀</span> Publicar na Vitrine
             </button>
 
@@ -604,6 +606,6 @@
     </div>
 </div>
 
-<script src="admin.js?v=1"></script>
+<script src="admin.js?v=2" defer></script>
 </body>
 </html>
