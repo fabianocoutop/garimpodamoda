@@ -23,13 +23,8 @@ serve(async (req) => {
     const reqData = await req.json()
     const { idProduto, pedidoId, titulo, precoCents } = reqData
 
-    // 1. Bloqueia a roupa no banco de dados
-    const { error: dbError } = await supabaseClient
-      .from('produtos')
-      .update({ disponivel: false })
-      .eq('id', idProduto);
-
-    if (dbError) throw new Error('Falha ao reservar estoque do item: ' + dbError.message);
+    // Nota: O produto NÃO é bloqueado aqui. Ele só será marcado como
+    // indisponível quando o webhook do AbacatePay confirmar o pagamento.
 
     // 1.5. Recupera os dados REAIS do Cliente salvos via RPC
     const { data: pedidoData, error: dbPedidoError } = await supabaseClient
