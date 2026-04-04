@@ -53,15 +53,25 @@ serve(async (req) => {
       return jsonResponse({ success: false, error: 'Um ou mais produtos não encontrados.' }, 400)
     }
 
-    // --- Lógica de Frete no Servidor (mesma config do frontend) ---
-    const SHIP_BOXES = [
-      { maxItems: 2,   c: 20,   l: 15, a: 5,  boxWeight: 0.15 },
-      { maxItems: 4,   c: 25,   l: 20, a: 7,  boxWeight: 0.15 },
-      { maxItems: 6,   c: 30,   l: 22, a: 10, boxWeight: 0.20 },
-      { maxItems: 10,  c: 33.5, l: 27, a: 14, boxWeight: 0.25 },
-      { maxItems: 999, c: 40,   l: 30, a: 15, boxWeight: 0.30 },
-    ]
+    // --- Lógica de Frete no Servidor (mesma tabela do frontend) ---
     const DEFAULT_WEIGHT = 0.50
+    const SHIP_BOXES = [
+      { maxItems: 2,   boxWeight: 0.15 },
+      { maxItems: 4,   boxWeight: 0.15 },
+      { maxItems: 6,   boxWeight: 0.20 },
+      { maxItems: 10,  boxWeight: 0.25 },
+      { maxItems: 999, boxWeight: 0.30 },
+    ]
+    const REGIONS = [
+      { prefixes: ['29'],               pac: { base: 18, perKg: 4 }, sedex: { base: 25, perKg: 6 } },
+      { prefixes: ['20','21','22','23','24','25','26','27','28','30','31','32','33','34','35','36','37','38','39'], pac: { base: 22, perKg: 5 }, sedex: { base: 32, perKg: 7 } },
+      { prefixes: ['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19'], pac: { base: 24, perKg: 5 }, sedex: { base: 35, perKg: 8 } },
+      { prefixes: ['40','41','42','43','44','45','46','47','48','49'], pac: { base: 25, perKg: 6 }, sedex: { base: 38, perKg: 9 } },
+      { prefixes: ['80','81','82','83','84','85','86','87','88','89','90','91','92','93','94','95','96','97','98','99'], pac: { base: 28, perKg: 6 }, sedex: { base: 42, perKg: 9 } },
+      { prefixes: ['70','71','72','73','74','75','76','77','78','79'], pac: { base: 30, perKg: 7 }, sedex: { base: 45, perKg: 10 } },
+      { prefixes: ['50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69'], pac: { base: 32, perKg: 7 }, sedex: { base: 48, perKg: 10 } },
+      { prefixes: [],                    pac: { base: 38, perKg: 9 }, sedex: { base: 55, perKg: 12 } },
+    ]
 
     const qtdItens = dbProducts.length
     const box = SHIP_BOXES.find(b => qtdItens <= b.maxItems) || SHIP_BOXES[SHIP_BOXES.length - 1]
@@ -71,25 +81,13 @@ serve(async (req) => {
     let valorFrete = 30.00 // fallback
 
     if (cep_destino && shipping_method) {
-      try {
-        const cepOrigem = '29937400'
-        const cepDestino = cep_destino.replace(/\D/g, '')
-
-        const url = `http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdServico=${shipping_method}&sCepOrigem=${cepOrigem}&sCepDestino=${cepDestino}&nVlPeso=${pesoTotal}&nCdFormato=1&nVlComprimento=${box.c}&nVlAltura=${box.a}&nVlLargura=${box.l}&nVlDiametro=0&sCdMaoPropria=n&nVlValorDeclarado=0&sCdAvisoRecebimento=n&StrRetorno=xml`
-
-        const correiosRes = await fetch(url)
-        const xml = await correiosRes.text()
-
-        const valorMatch = xml.match(/<Valor>([^<]+)<\/Valor>/)
-        if (valorMatch) {
-          valorFrete = parseFloat(valorMatch[1].replace(',', '.'))
-        }
-      } catch (e) {
-        console.error('Erro ao validar frete nos Correios:', e)
-        if (shipping_cost && Number(shipping_cost) > 15) {
-          valorFrete = Number(shipping_cost)
-        }
-      }
+      const prefix = cep_destino.replace(/\D/g, '').substring(0, 2)
+      const region = REGIONS.find(r => r.prefixes.includes(prefix)) || REGIONS[REGIONS.length - 1]
+      const kgExtra = Math.max(0, Math.ceil(pesoTotal) - 1)
+      const svc = shipping_method === 'SEDEX' ? region.sedex : region.pac
+      valorFrete = svc.base + (kgExtra * svc.perKg)
+    } else if (shipping_cost && Number(shipping_cost) > 0) {
+      valorFrete = Number(shipping_cost)
     }
 
     // --- Calcular total do servidor (Produtos + Frete) ---

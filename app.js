@@ -16,15 +16,29 @@ let currentShippingCost = 0;
 let shippingOptions = [];
 
 // ---- CONFIG DE FRETE (editável) ---- //
+// Origem: São Mateus/ES (CEP 29937-400)
+// Preços baseados nas tabelas dos Correios 2026, arredondados para cima
 const SHIPPING_CONFIG = {
     cepOrigem: '29937400',
-    defaultWeightPerItem: 0.50, // kg - peso médio conservador por peça de roupa
+    defaultWeightPerItem: 0.50, // kg
     boxes: [
         { name: 'PP', maxItems: 2,   comprimento: 20,   largura: 15, altura: 5,  boxWeight: 0.15 },
         { name: 'P',  maxItems: 4,   comprimento: 25,   largura: 20, altura: 7,  boxWeight: 0.15 },
         { name: 'M',  maxItems: 6,   comprimento: 30,   largura: 22, altura: 10, boxWeight: 0.20 },
         { name: 'G',  maxItems: 10,  comprimento: 33.5,  largura: 27, altura: 14, boxWeight: 0.25 },
         { name: 'GG', maxItems: 999, comprimento: 40,   largura: 30, altura: 15, boxWeight: 0.30 },
+    ],
+    // Tabela de preços por região (baseado nos 2 primeiros dígitos do CEP)
+    // Cada região tem preço base PAC e SEDEX para até 1kg, + adicional por kg extra
+    regions: [
+        { name: 'ES (local)',     prefixes: ['29'],               pac: { base: 18, perKgExtra: 4, prazo: 3 },  sedex: { base: 25, perKgExtra: 6, prazo: 1 } },
+        { name: 'RJ/MG',         prefixes: ['20','21','22','23','24','25','26','27','28','30','31','32','33','34','35','36','37','38','39'], pac: { base: 22, perKgExtra: 5, prazo: 5 }, sedex: { base: 32, perKgExtra: 7, prazo: 2 } },
+        { name: 'SP',            prefixes: ['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19'], pac: { base: 24, perKgExtra: 5, prazo: 6 }, sedex: { base: 35, perKgExtra: 8, prazo: 2 } },
+        { name: 'BA/SE',         prefixes: ['40','41','42','43','44','45','46','47','48','49'],                 pac: { base: 25, perKgExtra: 6, prazo: 7 }, sedex: { base: 38, perKgExtra: 9, prazo: 3 } },
+        { name: 'PR/SC/RS',      prefixes: ['80','81','82','83','84','85','86','87','88','89','90','91','92','93','94','95','96','97','98','99'], pac: { base: 28, perKgExtra: 6, prazo: 8 }, sedex: { base: 42, perKgExtra: 9, prazo: 3 } },
+        { name: 'DF/GO/MS/MT',   prefixes: ['70','71','72','73','74','75','76','77','78','79'],                 pac: { base: 30, perKgExtra: 7, prazo: 8 }, sedex: { base: 45, perKgExtra: 10, prazo: 3 } },
+        { name: 'NE (demais)',    prefixes: ['50','51','52','53','54','55','56','57','58','59','60','61','62','63','64','65','66','67','68','69'], pac: { base: 32, perKgExtra: 7, prazo: 10 }, sedex: { base: 48, perKgExtra: 10, prazo: 4 } },
+        { name: 'Norte',         prefixes: [],                    pac: { base: 38, perKgExtra: 9, prazo: 12 }, sedex: { base: 55, perKgExtra: 12, prazo: 5 } },
     ]
 };
 
@@ -223,15 +237,39 @@ async function buscarCep(cepFormatado) {
             document.getElementById('estado').value = data.uf || '';
             document.getElementById('numero').focus();
 
-            // Disparar cálculo de frete nos Correios
-            await buscarFreteCorreios(cep);
+            // Calcular frete
+            buscarFreteCorreios(cep);
         }
     } catch(e) {
         console.error("Erro viaCep:", e);
     }
 }
 
-async function buscarFreteCorreios(cep) {
+function calcularFreteLocal(cep) {
+    const prefix = cep.substring(0, 2);
+    const dadosEnvio = calcularDadosEnvio();
+    const pesoKg = dadosEnvio.peso;
+
+    // Encontrar região pelo prefixo do CEP
+    let region = SHIPPING_CONFIG.regions.find(r => r.prefixes.includes(prefix));
+    if (!region) {
+        // Fallback: região "Norte" (última, sem prefixes definidos)
+        region = SHIPPING_CONFIG.regions[SHIPPING_CONFIG.regions.length - 1];
+    }
+
+    // Calcular preço: base (até 1kg) + adicional por kg extra
+    const kgExtra = Math.max(0, Math.ceil(pesoKg) - 1);
+
+    const pacPrice = region.pac.base + (kgExtra * region.pac.perKgExtra);
+    const sedexPrice = region.sedex.base + (kgExtra * region.sedex.perKgExtra);
+
+    return [
+        { codigo: 'PAC',   nome: `PAC - ${escapeHtml(region.name)}`,   valor: pacPrice,   prazo: region.pac.prazo },
+        { codigo: 'SEDEX', nome: `SEDEX - ${escapeHtml(region.name)}`, valor: sedexPrice, prazo: region.sedex.prazo },
+    ];
+}
+
+function buscarFreteCorreios(cep) {
     const container = document.getElementById('shipping-options-container');
     if (!container) return;
 
@@ -239,38 +277,20 @@ async function buscarFreteCorreios(cep) {
     currentShippingMethod = null;
     currentShippingCost = 0;
 
-    // Mostrar container com loading
+    // Mostrar container
     container.style.display = 'block';
     container.innerHTML = `
         <div class="shipping-loading">
-            <span class="spinner"></span> Calculando frete nos Correios...
+            <span class="spinner"></span> Calculando frete...
         </div>`;
 
-    const dadosEnvio = calcularDadosEnvio();
-
+    // Cálculo local instantâneo (sem dependência de API externa)
     try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/get-shipping-quote`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-            },
-            body: JSON.stringify({
-                cep_destino: cep,
-                peso: dadosEnvio.peso,
-                comprimento: dadosEnvio.comprimento,
-                largura: dadosEnvio.largura,
-                altura: dadosEnvio.altura,
-            }),
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
-
-        shippingOptions = data.options;
-        renderizarOpcoesFrete(data.options);
+        const options = calcularFreteLocal(cep);
+        shippingOptions = options;
+        renderizarOpcoesFrete(options);
     } catch (e) {
-        container.innerHTML = `<p class="error-msg" style="font-size:0.8rem">Erro ao calcular frete: ${escapeHtml(e.message)}. Tente novamente ou mude o CEP.</p>`;
+        container.innerHTML = `<p class="error-msg" style="font-size:0.8rem">Erro ao calcular frete. Tente novamente.</p>`;
     }
 }
 
