@@ -271,6 +271,9 @@
             gap: 12px;
         }
 
+        .peso-input-wrapper { display: none; margin-top: 8px; }
+        .peso-input-wrapper.active { display: block; }
+
         /* Upload de imagem */
         .upload-area {
             border: 2px dashed var(--border);
@@ -633,6 +636,19 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label>Peso Estimado (Frete) *</label>
+                <select id="novo-peso-preset" onchange="toggleManualPeso(this.value)">
+                    <option value="0.400">Leve (Malha, Viscose, Top - 0.40kg)</option>
+                    <option value="0.500" selected>Padrão / Médio (0.50kg)</option>
+                    <option value="0.700">Pesado (Jeans, Casacos - 0.70kg)</option>
+                    <option value="manual">Digite o peso manualmente...</option>
+                </select>
+                <div id="peso-manual-area" class="peso-input-wrapper">
+                    <input type="number" id="novo-peso-manual" placeholder="Peso em KG (ex: 1.250)" step="0.001" min="0.010">
+                </div>
+            </div>
+
             <button class="btn-publish" id="btn-publicar" onclick="publicarProduto()" aria-label="Publicar peça na vitrine">
                 <span>🚀</span> Publicar na Vitrine
             </button>
@@ -664,6 +680,16 @@ function toggleFormMobile() {
         btn.innerHTML = '<span class="toggle-arrow">▼</span> Esconder Formulário';
     } else {
         btn.innerHTML = '<span class="toggle-arrow">▼</span> Mostrar Formulário';
+    }
+}
+
+function toggleManualPeso(val) {
+    const area = document.getElementById('peso-manual-area');
+    if (val === 'manual') {
+        area.classList.add('active');
+        document.getElementById('novo-peso-manual').focus();
+    } else {
+        area.classList.remove('active');
     }
 }
 </script>

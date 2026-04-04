@@ -30,7 +30,8 @@ function adicionarAoCarrinho(id) {
         titulo: produto.titulo,
         preco: produto.preco,
         imagem_url: produto.imagem_url,
-        tamanho: produto.tamanho
+        tamanho: produto.tamanho,
+        peso: produto.peso // Adicionando peso para cálculo de frete
     });
     salvarCarrinho();
     atualizarBadgeCarrinho();
@@ -58,6 +59,19 @@ function estaNoCarrinho(id) {
 
 function totalCarrinho() {
     return carrinho.reduce((sum, item) => sum + item.preco, 0);
+}
+
+// Lógica de Pesos e Frete
+function calcularPesoTotal() {
+    return carrinho.reduce((acc, p) => acc + (parseFloat(p.peso) || 0.500), 0);
+}
+
+function calcularFrete(peso) {
+    if (peso <= 0.400) return 25.00; // Caixa P 
+    if (peso <= 0.700) return 30.00; // Caixa M
+    if (peso <= 1.200) return 38.00; // Caixa G
+    if (peso <= 2.000) return 48.00; // Heavy
+    return 48.00 + (Math.ceil(peso - 2) * 12); // Extra por KG
 }
 
 function atualizarBadgeCarrinho() {
@@ -256,7 +270,13 @@ function abrirCheckoutDoCarrinho() {
     document.getElementById('checkout-overlay').style.display = 'flex';
 
     const summaryEl = document.getElementById('product-summary');
-    const total = totalCarrinho();
+    const subtotal = totalCarrinho();
+    const pesoTotal = calcularPesoTotal();
+    const frete = calcularFrete(pesoTotal);
+    const total = subtotal + frete;
+
+    const subtotalFmt = subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const freteFmt = frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     summaryEl.innerHTML = carrinho.map(item => {
@@ -266,12 +286,17 @@ function abrirCheckoutDoCarrinho() {
             <img src="${escapeHtml(item.imagem_url)}" alt="${escapeHtml(item.titulo)}" class="summary-img">
             <div>
                 <strong>${escapeHtml(item.titulo)}</strong><br>
-                <span class="price">${pFmt}</span>
+                <small>Peso: ${(item.peso || 0.5).toFixed(3)}kg</small> | <span class="price">${pFmt}</span>
             </div>
         </div>`;
     }).join('') + `
+    <div class="summary-calculations">
+        <div class="calc-row"><span>Itens (${carrinho.length}):</span> <span>${subtotalFmt}</span></div>
+        <div class="calc-row"><span>Peso Total:</span> <span>${pesoTotal.toFixed(3)} kg</span></div>
+        <div class="calc-row"><span>Frete:</span> <span>${freteFmt}</span></div>
+    </div>
     <div class="summary-total">
-        <strong>Total (${carrinho.length} ${carrinho.length === 1 ? 'peça' : 'peças'}):</strong>
+        <strong>Total a pagar:</strong>
         <span class="price">${totalFmt}</span>
     </div>`;
 }

@@ -45,6 +45,7 @@ serve(async (req) => {
     // Stripe PIX exige que o cliente tenha nome e CPF (tax_id)
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'pix'],
+      tax_id_collection: { enabled: true },
       line_items: [
         {
           price_data: {
@@ -87,7 +88,14 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Erro no checkout Stripe:', error.message);
+    console.error('Erro no checkout Stripe:', error);
+    if (error instanceof Error) {
+       console.error('Mensagem:', error.message);
+       // Se for um erro do Stripe, ele tem detalhes extras
+       if ('raw' in error) {
+         console.error('Detalhes Stripe:', JSON.stringify(error.raw));
+       }
+    }
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

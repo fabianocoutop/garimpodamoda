@@ -100,6 +100,15 @@ async function publicarProduto() {
     const descricao = document.getElementById('nova-descricao').value.trim();
     const preco = parseFloat(document.getElementById('novo-preco').value);
     const tamanho = document.getElementById('novo-tamanho').value;
+    
+    // Coleta do peso
+    const pesoPreset = document.getElementById('novo-peso-preset').value;
+    let peso = 0.500; // Padrão
+    if (pesoPreset === 'manual') {
+        peso = parseFloat(document.getElementById('novo-peso-manual').value) || 0.500;
+    } else {
+        peso = parseFloat(pesoPreset);
+    }
 
     const feedback = document.getElementById('form-feedback');
     feedback.style.display = 'none';
@@ -148,6 +157,7 @@ async function publicarProduto() {
             descricao,
             preco,
             tamanho,
+            peso,
             imagem_url,
             disponivel: true
         }).select().single();
@@ -179,6 +189,9 @@ function limparFormulario() {
     document.getElementById('nova-descricao').value = '';
     document.getElementById('novo-preco').value = '';
     document.getElementById('novo-tamanho').value = 'M';
+    document.getElementById('novo-peso-preset').value = '0.500';
+    document.getElementById('novo-peso-manual').value = '';
+    document.getElementById('peso-manual-area').classList.remove('active');
     document.getElementById('upload-placeholder').style.display = 'block';
     document.getElementById('foto-preview').style.display = 'none';
     document.getElementById('foto-preview').src = '';

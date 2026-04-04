@@ -45,7 +45,7 @@ serve(async (req) => {
     const productIds = cart_items.map((item: { id: number }) => item.id)
     const { data: dbProducts, error: prodError } = await supabase
       .from('produtos')
-      .select('id, preco, titulo, disponivel')
+      .select('id, preco, titulo, disponivel, peso')
       .in('id', productIds)
 
     if (prodError) throw new Error('Erro ao verificar produtos: ' + prodError.message)
@@ -53,14 +53,22 @@ serve(async (req) => {
       return jsonResponse({ success: false, error: 'Um ou mais produtos não encontrados.' }, 400)
     }
 
-    const indisponiveis = dbProducts.filter(p => !p.disponivel)
-    if (indisponiveis.length > 0) {
-      const nomes = indisponiveis.map(p => p.titulo).join(', ')
-      return jsonResponse({ success: false, error: `Produtos já vendidos: ${nomes}` }, 409)
+    // --- Lógica de Frete no Servidor ---
+    const pesoTotal = dbProducts.reduce((sum: number, p: any) => sum + (Number(p.peso) || 0.500), 0)
+    
+    function calcularFreteServer(peso: number) {
+      if (peso <= 0.400) return 25.00
+      if (peso <= 0.700) return 30.00
+      if (peso <= 1.200) return 38.00
+      if (peso <= 2.000) return 48.00
+      return 48.00 + (Math.ceil(peso - 2) * 12)
     }
 
-    // --- Calcular total do servidor (não confiar no cliente) ---
-    const valorTotal = dbProducts.reduce((sum, p) => sum + Number(p.preco), 0)
+    const valorFrete = calcularFreteServer(pesoTotal)
+
+    // --- Calcular total do servidor (Produtos + Frete) ---
+    const subtotal = dbProducts.reduce((sum: number, p: any) => sum + Number(p.preco), 0)
+    const valorTotal = subtotal + valorFrete
 
     // --- Inserir/Upsert Cliente ---
     const { data: clienteData, error: clienteError } = await supabase
@@ -142,7 +150,7 @@ serve(async (req) => {
     const firstName = nomeParts[0]
     const lastName = nomeParts.slice(1).join(' ') || firstName
 
-    const descricao = dbProducts.map(p => p.titulo).join(' + ')
+    const descricao = dbProducts.map(p => p.titulo).join(' + ') + ` (+ Frete R$ ${valorFrete.toFixed(2)})`
 
     const mpPayload: Record<string, unknown> = {
       transaction_amount: Number(valorTotal.toFixed(2)),
