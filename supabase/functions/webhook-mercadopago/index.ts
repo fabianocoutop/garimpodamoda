@@ -80,11 +80,23 @@ serve(async (req) => {
 
     // --- Ações conforme status ---
     if (payment.status === 'approved') {
-      // Pagamento confirmado! Produtos já estão reservados (disponivel=false desde a criação)
-      console.log(`Pedido ${pedidoId} APROVADO.`)
+      // Pagamento confirmado! Marcar produtos como vendidos agora
+      console.log(`Pedido ${pedidoId} APROVADO. Marcando produtos como vendidos.`)
+
+      const { data: itens } = await supabase
+        .from('pedido_itens')
+        .select('produto_id')
+        .eq('pedido_id', pedidoId)
+
+      if (itens && itens.length > 0) {
+        const produtoIds = itens.map(i => i.produto_id)
+        for (const pid of produtoIds) {
+          await supabase.from('produtos').update({ disponivel: false }).eq('id', pid)
+        }
+      }
 
     } else if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(payment.status)) {
-      // Pagamento falhou/cancelado: re-habilitar produtos
+      // Pagamento falhou/cancelado/reembolsado: garantir que produtos estejam disponíveis
       console.log(`Pedido ${pedidoId} ${payment.status}. Re-habilitando produtos.`)
 
       const { data: itens } = await supabase
@@ -99,7 +111,7 @@ serve(async (req) => {
         }
       }
     }
-    // Para pending/in_process: não fazer nada, produtos continuam reservados
+    // Para pending/in_process: não fazer nada, produtos continuam disponíveis
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

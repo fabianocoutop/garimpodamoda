@@ -133,10 +133,8 @@ serve(async (req) => {
     const { error: itensError } = await supabase.from('pedido_itens').insert(itens)
     if (itensError) throw new Error('Erro ao salvar itens: ' + itensError.message)
 
-    // --- Reservar produtos (disponivel = false) ---
-    for (const pid of productIds) {
-      await supabase.from('produtos').update({ disponivel: false }).eq('id', pid)
-    }
+    // Produtos NÃO são reservados aqui.
+    // Só serão marcados como vendidos quando o pagamento for confirmado (via webhook ou aprovação instantânea de cartão).
 
     // --- Montar payload do Mercado Pago ---
     const cpfClean = customer.cpf.replace(/\D/g, '')
@@ -194,10 +192,6 @@ serve(async (req) => {
 
     if (!mpResponse.ok) {
       console.error('Erro MP API:', JSON.stringify(mpData))
-      // Re-habilitar produtos se pagamento falhou
-      for (const pid of productIds) {
-        await supabase.from('produtos').update({ disponivel: true }).eq('id', pid)
-      }
       await supabase.from('pedidos').update({
         status_pagamento: 'erro',
         mp_status: mpData.status || 'error',
@@ -229,6 +223,10 @@ serve(async (req) => {
     } else {
       // Cartão
       if (mpData.status === 'approved') {
+        // Cartão aprovado instantaneamente: marcar produtos como vendidos agora
+        for (const pid of productIds) {
+          await supabase.from('produtos').update({ disponivel: false }).eq('id', pid)
+        }
         return jsonResponse({
           success: true,
           payment_method: payment.method,
@@ -236,10 +234,6 @@ serve(async (req) => {
           status: 'approved',
         })
       } else if (mpData.status === 'rejected') {
-        // Re-habilitar produtos se cartão rejeitado
-        for (const pid of productIds) {
-          await supabase.from('produtos').update({ disponivel: true }).eq('id', pid)
-        }
         await supabase.from('pedidos').update({ status_pagamento: 'rejeitado' }).eq('id', pedidoId)
         return jsonResponse({
           success: false,

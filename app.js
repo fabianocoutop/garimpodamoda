@@ -99,7 +99,7 @@ async function initApp() {
 
 async function carregarProdutos() {
     const vitrine = document.getElementById('vitrine');
-    const { data, error } = await _supabase.from('produtos').select('*').order('created_at', { ascending: false });
+    const { data, error } = await _supabase.from('produtos').select('*').order('disponivel', { ascending: false }).order('created_at', { ascending: false });
     if (error) {
         console.error("Erro Supabase:", error);
         vitrine.innerHTML = `<p class="error-msg">Erro ao conectar com o catálogo de peças. Reinicie.</p>`;
