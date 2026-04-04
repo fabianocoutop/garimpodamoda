@@ -11,6 +11,22 @@ let cardFormInstance = null;
 let customerData = null;
 let currentPedidoId = null;
 let pixPollingInterval = null;
+let currentShippingMethod = null;
+let currentShippingCost = 0;
+let shippingOptions = [];
+
+// ---- CONFIG DE FRETE (editável) ---- //
+const SHIPPING_CONFIG = {
+    cepOrigem: '29937400',
+    defaultWeightPerItem: 0.50, // kg - peso médio conservador por peça de roupa
+    boxes: [
+        { name: 'PP', maxItems: 2,   comprimento: 20,   largura: 15, altura: 5,  boxWeight: 0.15 },
+        { name: 'P',  maxItems: 4,   comprimento: 25,   largura: 20, altura: 7,  boxWeight: 0.15 },
+        { name: 'M',  maxItems: 6,   comprimento: 30,   largura: 22, altura: 10, boxWeight: 0.20 },
+        { name: 'G',  maxItems: 10,  comprimento: 33.5,  largura: 27, altura: 14, boxWeight: 0.25 },
+        { name: 'GG', maxItems: 999, comprimento: 40,   largura: 30, altura: 15, boxWeight: 0.30 },
+    ]
+};
 
 // ---- CARRINHO DE COMPRAS ---- //
 let carrinho = [];
@@ -61,17 +77,19 @@ function totalCarrinho() {
     return carrinho.reduce((sum, item) => sum + item.preco, 0);
 }
 
-// Lógica de Pesos e Frete
-function calcularPesoTotal() {
-    return carrinho.reduce((acc, p) => acc + (parseFloat(p.peso) || 0.500), 0);
-}
-
-function calcularFrete(peso) {
-    if (peso <= 0.400) return 25.00; // Caixa P 
-    if (peso <= 0.700) return 30.00; // Caixa M
-    if (peso <= 1.200) return 38.00; // Caixa G
-    if (peso <= 2.000) return 48.00; // Heavy
-    return 48.00 + (Math.ceil(peso - 2) * 12); // Extra por KG
+// Lógica de Envio - seleciona caixa por quantidade de itens
+function calcularDadosEnvio() {
+    const qtd = carrinho.length;
+    const box = SHIPPING_CONFIG.boxes.find(b => qtd <= b.maxItems)
+             || SHIPPING_CONFIG.boxes[SHIPPING_CONFIG.boxes.length - 1];
+    const pesoItens = carrinho.reduce((acc, p) =>
+        acc + (parseFloat(p.peso) || SHIPPING_CONFIG.defaultWeightPerItem), 0);
+    return {
+        peso: Math.max(box.boxWeight + pesoItens, 0.3),
+        comprimento: box.comprimento,
+        largura: box.largura,
+        altura: box.altura,
+    };
 }
 
 function atualizarBadgeCarrinho() {
@@ -204,10 +222,112 @@ async function buscarCep(cepFormatado) {
             document.getElementById('cidade').value = data.localidade || '';
             document.getElementById('estado').value = data.uf || '';
             document.getElementById('numero').focus();
+
+            // Disparar cálculo de frete nos Correios
+            await buscarFreteCorreios(cep);
         }
     } catch(e) {
         console.error("Erro viaCep:", e);
     }
+}
+
+async function buscarFreteCorreios(cep) {
+    const container = document.getElementById('shipping-options-container');
+    if (!container) return;
+
+    // Resetar seleção anterior
+    currentShippingMethod = null;
+    currentShippingCost = 0;
+
+    // Mostrar container com loading
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="shipping-loading">
+            <span class="spinner"></span> Calculando frete nos Correios...
+        </div>`;
+
+    const dadosEnvio = calcularDadosEnvio();
+
+    try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/get-shipping-quote`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+            },
+            body: JSON.stringify({
+                cep_destino: cep,
+                peso: dadosEnvio.peso,
+                comprimento: dadosEnvio.comprimento,
+                largura: dadosEnvio.largura,
+                altura: dadosEnvio.altura,
+            }),
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        shippingOptions = data.options;
+        renderizarOpcoesFrete(data.options);
+    } catch (e) {
+        container.innerHTML = `<p class="error-msg" style="font-size:0.8rem">Erro ao calcular frete: ${escapeHtml(e.message)}. Tente novamente ou mude o CEP.</p>`;
+    }
+}
+
+function renderizarOpcoesFrete(options) {
+    const container = document.getElementById('shipping-options-container');
+    if (!container) return;
+
+    // Selecionar o mais barato por padrão (geralmente PAC)
+    const defaultOption = options.reduce((prev, curr) => prev.valor < curr.valor ? prev : curr);
+    currentShippingMethod = defaultOption.codigo;
+    currentShippingCost = defaultOption.valor;
+
+    container.innerHTML = `
+        <span class="shipping-title">Escolha o Frete:</span>
+        ${options.map(opt => `
+            <div class="shipping-option ${opt.codigo === currentShippingMethod ? 'selected' : ''}" onclick="selecionarFrete('${opt.codigo}', ${opt.valor})">
+                <input type="radio" name="shipping" value="${opt.codigo}" ${opt.codigo === currentShippingMethod ? 'checked' : ''}>
+                <div class="shipping-info">
+                    <div>
+                        <div class="shipping-type">${escapeHtml(opt.nome)}</div>
+                        <div class="shipping-time">Chega em até ${opt.prazo} dias úteis</div>
+                    </div>
+                    <div class="shipping-price">${opt.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                </div>
+            </div>
+        `).join('')}
+    `;
+
+    // Mostrar a linha de frete no resumo
+    const freteRow = document.querySelector('.frete-row');
+    if (freteRow) freteRow.style.display = 'flex';
+
+    atualizarTotalCheckout();
+}
+
+function selecionarFrete(codigo, valor) {
+    currentShippingMethod = codigo;
+    currentShippingCost = valor;
+    
+    // UI feedback
+    document.querySelectorAll('.shipping-option').forEach(el => {
+        el.classList.toggle('selected', el.querySelector('input').value === codigo);
+        el.querySelector('input').checked = (el.querySelector('input').value === codigo);
+    });
+
+    atualizarTotalCheckout();
+}
+
+function atualizarTotalCheckout() {
+    const subtotal = totalCarrinho();
+    const total = subtotal + currentShippingCost;
+    
+    const freteFmt = currentShippingCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    document.getElementById('checkout-frete-value').textContent = freteFmt;
+    document.getElementById('checkout-total-value').textContent = totalFmt;
 }
 
 // ----------------- SIDEBAR DO CARRINHO ----------------- //
@@ -271,13 +391,10 @@ function abrirCheckoutDoCarrinho() {
 
     const summaryEl = document.getElementById('product-summary');
     const subtotal = totalCarrinho();
-    const pesoTotal = calcularPesoTotal();
-    const frete = calcularFrete(pesoTotal);
-    const total = subtotal + frete;
-
     const subtotalFmt = subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const freteFmt = frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    currentShippingCost = 0; // Reset inicial
+    currentShippingMethod = null;
 
     summaryEl.innerHTML = carrinho.map(item => {
         const pFmt = item.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -286,18 +403,18 @@ function abrirCheckoutDoCarrinho() {
             <img src="${escapeHtml(item.imagem_url)}" alt="${escapeHtml(item.titulo)}" class="summary-img">
             <div>
                 <strong>${escapeHtml(item.titulo)}</strong><br>
-                <small>Peso: ${(item.peso || 0.5).toFixed(3)}kg</small> | <span class="price">${pFmt}</span>
+                <span class="price">${pFmt}</span>
             </div>
         </div>`;
     }).join('') + `
+    <div id="shipping-options-container" class="shipping-selector" style="display:none;"></div>
     <div class="summary-calculations">
-        <div class="calc-row"><span>Itens (${carrinho.length}):</span> <span>${subtotalFmt}</span></div>
-        <div class="calc-row"><span>Peso Total:</span> <span>${pesoTotal.toFixed(3)} kg</span></div>
-        <div class="calc-row"><span>Frete:</span> <span>${freteFmt}</span></div>
+        <div class="calc-row"><span>Subtotal:</span> <span>${subtotalFmt}</span></div>
+        <div class="calc-row frete-row" style="display:none;"><span>Frete:</span> <span id="checkout-frete-value">R$ 0,00</span></div>
     </div>
     <div class="summary-total">
-        <strong>Total a pagar:</strong>
-        <span class="price">${totalFmt}</span>
+        <strong>Total:</strong>
+        <span id="checkout-total-value" class="price">${subtotalFmt}</span>
     </div>`;
 }
 
@@ -344,6 +461,12 @@ async function processarPedido(event) {
     }
     if (carrinho.length === 0) {
         erroDisplay.textContent = "Seu carrinho está vazio.";
+        erroDisplay.style.display = 'block';
+        return;
+    }
+
+    if (!currentShippingMethod) {
+        erroDisplay.textContent = "Por favor, informe seu CEP e selecione uma opção de frete.";
         erroDisplay.style.display = 'block';
         return;
     }
@@ -404,6 +527,9 @@ async function pagarComPix() {
                 customer: customerData,
                 cart_items: carrinho,
                 payment: { method: 'pix' },
+                shipping_method: currentShippingMethod,
+                shipping_cost: currentShippingCost,
+                cep_destino: customerData.cep
             }),
         });
 
@@ -527,6 +653,9 @@ async function pagarComCartao() {
                     issuer_id: cardFormData.issuerId,
                     payment_method_id: cardFormData.paymentMethodId,
                 },
+                shipping_method: currentShippingMethod,
+                shipping_cost: currentShippingCost,
+                cep_destino: customerData.cep
             }),
         });
 

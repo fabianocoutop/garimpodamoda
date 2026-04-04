@@ -855,3 +855,121 @@ body {
         scroll-behavior: auto !important;
     }
 }
+
+/* --- Seletor de Frete Premium --- */
+.shipping-selector {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 15px;
+    border: 1px solid #e9ecef;
+}
+
+.shipping-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.shipping-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border: 2px solid #edeff2;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shipping-option:hover {
+    border-color: var(--color-primary);
+    background: #fffdf5;
+}
+
+.shipping-option.selected {
+    border-color: var(--color-primary);
+    background: #fffdf5;
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.1);
+}
+
+.shipping-option input[type="radio"] {
+    accent-color: var(--color-primary);
+}
+
+.shipping-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shipping-type {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.shipping-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.shipping-price {
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.shipping-loading {
+    text-align: center;
+    padding: 15px;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.shipping-loading .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin-frete 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin-frete {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.summary-calculations {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    margin-top: 15px;
+}
+.calc-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 0.9rem;
+}
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    margin-top: 10px;
+    border-top: 2px solid #f0f0f0;
+}
+.summary-total strong {
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+.summary-total .price {
+    font-size: 1.2rem;
+}

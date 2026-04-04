@@ -25,7 +25,7 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
   try {
-    const { customer, cart_items, payment } = await req.json()
+    const { customer, cart_items, payment, shipping_method, shipping_cost, cep_destino } = await req.json()
 
     // --- Validações ---
     if (!customer?.nome || !customer?.email || !customer?.cpf) {
@@ -53,18 +53,44 @@ serve(async (req) => {
       return jsonResponse({ success: false, error: 'Um ou mais produtos não encontrados.' }, 400)
     }
 
-    // --- Lógica de Frete no Servidor ---
-    const pesoTotal = dbProducts.reduce((sum: number, p: any) => sum + (Number(p.peso) || 0.500), 0)
-    
-    function calcularFreteServer(peso: number) {
-      if (peso <= 0.400) return 25.00
-      if (peso <= 0.700) return 30.00
-      if (peso <= 1.200) return 38.00
-      if (peso <= 2.000) return 48.00
-      return 48.00 + (Math.ceil(peso - 2) * 12)
-    }
+    // --- Lógica de Frete no Servidor (mesma config do frontend) ---
+    const SHIP_BOXES = [
+      { maxItems: 2,   c: 20,   l: 15, a: 5,  boxWeight: 0.15 },
+      { maxItems: 4,   c: 25,   l: 20, a: 7,  boxWeight: 0.15 },
+      { maxItems: 6,   c: 30,   l: 22, a: 10, boxWeight: 0.20 },
+      { maxItems: 10,  c: 33.5, l: 27, a: 14, boxWeight: 0.25 },
+      { maxItems: 999, c: 40,   l: 30, a: 15, boxWeight: 0.30 },
+    ]
+    const DEFAULT_WEIGHT = 0.50
 
-    const valorFrete = calcularFreteServer(pesoTotal)
+    const qtdItens = dbProducts.length
+    const box = SHIP_BOXES.find(b => qtdItens <= b.maxItems) || SHIP_BOXES[SHIP_BOXES.length - 1]
+    const pesoItens = dbProducts.reduce((sum: number, p: any) => sum + (Number(p.peso) || DEFAULT_WEIGHT), 0)
+    const pesoTotal = Math.max(box.boxWeight + pesoItens, 0.3)
+
+    let valorFrete = 30.00 // fallback
+
+    if (cep_destino && shipping_method) {
+      try {
+        const cepOrigem = '29937400'
+        const cepDestino = cep_destino.replace(/\D/g, '')
+
+        const url = `http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdServico=${shipping_method}&sCepOrigem=${cepOrigem}&sCepDestino=${cepDestino}&nVlPeso=${pesoTotal}&nCdFormato=1&nVlComprimento=${box.c}&nVlAltura=${box.a}&nVlLargura=${box.l}&nVlDiametro=0&sCdMaoPropria=n&nVlValorDeclarado=0&sCdAvisoRecebimento=n&StrRetorno=xml`
+
+        const correiosRes = await fetch(url)
+        const xml = await correiosRes.text()
+
+        const valorMatch = xml.match(/<Valor>([^<]+)<\/Valor>/)
+        if (valorMatch) {
+          valorFrete = parseFloat(valorMatch[1].replace(',', '.'))
+        }
+      } catch (e) {
+        console.error('Erro ao validar frete nos Correios:', e)
+        if (shipping_cost && Number(shipping_cost) > 15) {
+          valorFrete = Number(shipping_cost)
+        }
+      }
+    }
 
     // --- Calcular total do servidor (Produtos + Frete) ---
     const subtotal = dbProducts.reduce((sum: number, p: any) => sum + Number(p.preco), 0)
