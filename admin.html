@@ -183,7 +183,34 @@
         }
 
         @media (max-width: 800px) {
-            .admin-content { grid-template-columns: 1fr; }
+            .admin-content {
+                grid-template-columns: 1fr;
+                padding: 16px 12px;
+                gap: 16px;
+            }
+            .admin-header { padding: 12px 16px; }
+
+            /* Formulário colapsável no mobile */
+            .card-admin { position: static !important; }
+            .card-admin .form-body {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.35s ease, opacity 0.3s ease;
+                opacity: 0;
+            }
+            .card-admin.expanded .form-body {
+                max-height: 1200px;
+                opacity: 1;
+            }
+            .toggle-form-btn {
+                display: flex !important;
+            }
+            .toggle-form-btn .toggle-arrow {
+                transition: transform 0.3s ease;
+            }
+            .card-admin.expanded .toggle-form-btn .toggle-arrow {
+                transform: rotate(180deg);
+            }
         }
 
         /* ===== FORM CARD ===== */
@@ -304,6 +331,23 @@
         }
 
         .upload-area.has-image:hover .upload-overlay { opacity: 1; }
+
+        .toggle-form-btn {
+            display: none;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
         .btn-publish {
             width: 100%;
@@ -537,8 +581,12 @@
     <div class="admin-content">
 
         <!-- FORMULÁRIO NOVA PEÇA -->
-        <div class="card-admin" style="position: sticky; top: 80px;">
+        <div class="card-admin" id="form-card" style="position: sticky; top: 80px;">
             <h2>✨ Adicionar Nova Peça</h2>
+            <button type="button" class="toggle-form-btn" onclick="toggleFormMobile()">
+                <span class="toggle-arrow">▼</span> Mostrar Formulário
+            </button>
+            <div class="form-body">
 
             <div class="form-group">
                 <label>Foto da Peça</label>
@@ -590,6 +638,7 @@
             </button>
 
             <div class="form-feedback" id="form-feedback"></div>
+            </div><!-- /form-body -->
         </div>
 
         <!-- LISTA DE PRODUTOS -->
@@ -606,6 +655,18 @@
     </div>
 </div>
 
-<script src="admin.js?v=2" defer></script>
+<script>
+function toggleFormMobile() {
+    const card = document.getElementById('form-card');
+    const btn = card.querySelector('.toggle-form-btn');
+    card.classList.toggle('expanded');
+    if (card.classList.contains('expanded')) {
+        btn.innerHTML = '<span class="toggle-arrow">▼</span> Esconder Formulário';
+    } else {
+        btn.innerHTML = '<span class="toggle-arrow">▼</span> Mostrar Formulário';
+    }
+}
+</script>
+<script src="admin.js?v=3" defer></script>
 </body>
 </html>
