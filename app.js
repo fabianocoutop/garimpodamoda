@@ -348,8 +348,14 @@ function selecionarMetodoPagamento(method) {
     const payErr = document.getElementById('payment-error');
     if (payErr) payErr.style.display = 'none';
 
-    if (method !== 'pix' && !cardFormInstance && mpInstance) {
-        initCardForm();
+    if (method !== 'pix' && mpInstance) {
+        // Destroy previous instance if exists to allow re-init
+        if (cardFormInstance) {
+            try { cardFormInstance.unmount(); } catch(e) { /* ignore */ }
+            cardFormInstance = null;
+        }
+        // Wait for the container to be visible before mounting iframes
+        setTimeout(() => { initCardForm(); }, 300);
     }
 }
 
