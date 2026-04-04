@@ -3,7 +3,14 @@ const SUPABASE_URL = 'https://rjjbxpssymaauqzpooig.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqamJ4cHNzeW1hYXVxenBvb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjQzMDcsImV4cCI6MjA5MDc0MDMwN30.595t4Df-jcn2JkZhKWVgb5E7pOjv2hj7_5eAba3PidQ';
 
 let _supabase = null;
-let useMockData = true; // Voltamos ao modo Mock para reservas manuais por enquanto
+
+// ---- MERCADO PAGO ---- //
+const MP_PUBLIC_KEY = 'APP_USR-ab1db545-20f5-41ad-9bcf-d6c473b29380';
+let mpInstance = null;
+let cardFormInstance = null;
+let customerData = null;
+let currentPedidoId = null;
+let pixPollingInterval = null;
 
 // ---- CARRINHO DE COMPRAS ---- //
 let carrinho = [];
@@ -77,71 +84,30 @@ function escapeHtml(str) {
     return d.innerHTML;
 }
 
-// Dados fictícios (Gerados baseados na IA)
-let mockProdutos = [
-    {
-        id: 1,
-        titulo: 'Blazer Vintage Anos 90',
-        descricao: 'Blazer em lã pura de alfaiataria importada. Peça única e exclusiva.',
-        preco: 129.90,
-        imagem_url: 'img/blazer.png',
-        disponivel: true,
-        tamanho: 'P'
-    },
-    {
-        id: 2,
-        titulo: 'Vestido de Festa Seda',
-        descricao: 'Fluido e muito elegante na cor rosa blush. Ideal para final de semana.',
-        preco: 189.90,
-        imagem_url: 'img/vestido.png',
-        disponivel: true,
-        tamanho: 'M'
-    },
-    {
-        id: 3,
-        titulo: 'Calça de Alfaiataria Nude',
-        descricao: 'Corte reto, cintura super alta. Valoriza demais a silhueta.',
-        preco: 89.90,
-        imagem_url: 'img/calca.png',
-        disponivel: true,
-        tamanho: 'G'
-    }
-];
-
 // Iniciação
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
 });
 
-// Inicializar banco ou ambiente mock
 async function initApp() {
-    if (SUPABASE_URL !== 'COLOQUE_AQUI_A_URL') {
-        _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        useMockData = false;
+    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (typeof MercadoPago !== 'undefined') {
+        mpInstance = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
     }
     await carregarProdutos();
 }
 
-// Buscar produtos do banco ou usar mock
 async function carregarProdutos() {
     const vitrine = document.getElementById('vitrine');
-    let produtos = [];
-
-    if (useMockData) {
-        produtos = mockProdutos;
-    } else {
-        const { data, error } = await _supabase.from('produtos').select('*').order('created_at', { ascending: false });
-        if (error) {
-            console.error("Erro Supabase:", error);
-            vitrine.innerHTML = `<p class="error-msg">Erro ao conectar com o catálogo de peças. Reinicie.</p>`;
-            return;
-        }
-        produtos = data;
+    const { data, error } = await _supabase.from('produtos').select('*').order('created_at', { ascending: false });
+    if (error) {
+        console.error("Erro Supabase:", error);
+        vitrine.innerHTML = `<p class="error-msg">Erro ao conectar com o catálogo de peças. Reinicie.</p>`;
+        return;
     }
-
-    produtosCarregados = produtos;
-    renderizarVitrine(produtos);
-    validarCarrinho(produtos);
+    produtosCarregados = data;
+    renderizarVitrine(data);
+    validarCarrinho(data);
 }
 
 // Exibir na tela (HTML)
@@ -313,23 +279,28 @@ function abrirCheckoutDoCarrinho() {
 function fecharCheckout() {
     document.getElementById('checkout-overlay').style.display = 'none';
     document.getElementById('checkout-form').reset();
+    document.getElementById('checkout-form').style.display = 'block';
     document.getElementById('checkout-error').style.display = 'none';
+    document.getElementById('payment-section').style.display = 'none';
+    document.getElementById('pix-qr-section').style.display = 'none';
+    document.getElementById('payment-result').style.display = 'none';
+    const payErr = document.getElementById('payment-error');
+    if (payErr) payErr.style.display = 'none';
+    if (pixPollingInterval) clearInterval(pixPollingInterval);
+    customerData = null;
+    currentPedidoId = null;
 }
 
-// Quando clicar em finalizar
+// Etapa 1: Validar dados do cliente e avançar para pagamento
 async function processarPedido(event) {
     event.preventDefault();
 
     const btn = document.getElementById('btn-finalizar');
     const erroDisplay = document.getElementById('checkout-error');
-
-    btn.innerHTML = 'Processando...';
-    btn.disabled = true;
     erroDisplay.style.display = 'none';
 
-    // Capturando dados do form
     const nome = document.getElementById('nome').value;
-    const insta = document.getElementById('instagram').value;
+    const instagram = document.getElementById('instagram').value;
     const email = document.getElementById('email').value;
     const cpf = document.getElementById('cpf').value;
     const telefone = document.getElementById('telefone').value;
@@ -340,52 +311,265 @@ async function processarPedido(event) {
     const cidade = document.getElementById('cidade').value;
     const estado = document.getElementById('estado').value;
 
-    // Validação mínima de CPF
     const cpfClean = cpf.replace(/\D/g, "");
     if (cpfClean.length !== 11) {
-        erroDisplay.innerHTML = "CPF Inválido.";
+        erroDisplay.textContent = "CPF Inválido.";
         erroDisplay.style.display = 'block';
-        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
-        btn.disabled = false;
+        return;
+    }
+    if (carrinho.length === 0) {
+        erroDisplay.textContent = "Seu carrinho está vazio.";
+        erroDisplay.style.display = 'block';
         return;
     }
 
-    if (carrinho.length === 0) {
-        erroDisplay.innerHTML = "Seu carrinho está vazio.";
-        erroDisplay.style.display = 'block';
-        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
-        btn.disabled = false;
-        return;
+    customerData = { nome, instagram, email, cpf: cpfClean, telefone, cep, rua, numero, bairro, cidade, estado };
+
+    // Preencher CPF no campo oculto do CardForm
+    const cpfField = document.getElementById('form-checkout__identificationNumber');
+    if (cpfField) cpfField.value = cpfClean;
+
+    // Esconder formulário, mostrar métodos de pagamento
+    document.getElementById('checkout-form').style.display = 'none';
+    document.getElementById('payment-section').style.display = 'block';
+    selecionarMetodoPagamento('pix');
+}
+
+// ----------------- SELEÇÃO DE MÉTODO ----------------- //
+
+function selecionarMetodoPagamento(method) {
+    document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`[data-method="${method}"]`);
+    if (btn) btn.classList.add('active');
+
+    document.getElementById('pix-section').style.display = method === 'pix' ? 'block' : 'none';
+    document.getElementById('card-section').style.display = method !== 'pix' ? 'block' : 'none';
+
+    const payErr = document.getElementById('payment-error');
+    if (payErr) payErr.style.display = 'none';
+
+    if (method !== 'pix' && !cardFormInstance && mpInstance) {
+        initCardForm();
     }
+}
+
+// ----------------- PIX ----------------- //
+
+async function pagarComPix() {
+    const btn = document.getElementById('btn-pagar-pix');
+    const payErr = document.getElementById('payment-error');
+    btn.disabled = true;
+    btn.textContent = 'Gerando PIX...';
+    payErr.style.display = 'none';
 
     try {
-        // FLUXO MOCK - Marcar todas as peças do carrinho como indisponíveis
-        const idsNoCarrinho = carrinho.map(item => item.id);
-        idsNoCarrinho.forEach(id => {
-            const prod = mockProdutos.find(p => p.id === id);
-            if (prod) prod.disponivel = false;
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-mp-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+            },
+            body: JSON.stringify({
+                customer: customerData,
+                cart_items: carrinho,
+                payment: { method: 'pix' },
+            }),
         });
 
-        // TODO: Integração Mercado Pago
-        // - Criar preferência de pagamento com totalCarrinho() e itens do carrinho
-        // - Redirecionar para checkout do Mercado Pago
-        // - No callback de sucesso, criar registros no Supabase (clientes + pedidos)
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Erro ao gerar PIX.');
 
-        setTimeout(() => {
-            const qtd = idsNoCarrinho.length;
-            alert(`RESERVA REALIZADA! ${qtd} ${qtd === 1 ? 'peça reservada' : 'peças reservadas'}. Entraremos em contato via Instagram para finalizar o envio.`);
-            limparCarrinho();
-            fecharCheckout();
-            carregarProdutos();
-            btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
-            btn.disabled = false;
-        }, 1500);
+        currentPedidoId = data.pedido_id;
 
+        // Mostrar QR Code
+        document.getElementById('payment-section').style.display = 'none';
+        document.getElementById('pix-qr-section').style.display = 'block';
+        document.getElementById('pix-qr-image').src = 'data:image/png;base64,' + data.qr_code_base64;
+        document.getElementById('pix-code').value = data.qr_code;
+        document.getElementById('pix-status').textContent = 'Aguardando pagamento...';
+
+        iniciarPollingPix(currentPedidoId);
     } catch (e) {
-        console.error("Houve erro ao processar reserva: ", e);
-        erroDisplay.innerHTML = "Ocorreu um erro ao processar sua reserva. Tente novamente.";
-        erroDisplay.style.display = 'block';
-        btn.innerHTML = 'Ir para Pagamento (Cartão ou PIX)';
-        btn.disabled = false;
+        payErr.textContent = e.message;
+        payErr.style.display = 'block';
     }
+
+    btn.disabled = false;
+    btn.textContent = 'Gerar QR Code PIX';
+}
+
+function copiarCodigoPix() {
+    const input = document.getElementById('pix-code');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = input.nextElementSibling;
+        btn.textContent = 'Copiado!';
+        setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+    });
+}
+
+function iniciarPollingPix(pedidoId) {
+    if (pixPollingInterval) clearInterval(pixPollingInterval);
+
+    pixPollingInterval = setInterval(async () => {
+        try {
+            const { data } = await _supabase
+                .from('pedidos')
+                .select('status_pagamento')
+                .eq('id', pedidoId)
+                .single();
+
+            if (data?.status_pagamento === 'aprovado') {
+                clearInterval(pixPollingInterval);
+                mostrarSucesso();
+            } else if (data?.status_pagamento === 'rejeitado' || data?.status_pagamento === 'cancelado') {
+                clearInterval(pixPollingInterval);
+                mostrarErro('Pagamento nao aprovado.');
+            }
+        } catch (e) {
+            console.error('Erro polling:', e);
+        }
+    }, 5000);
+
+    // Timeout: parar polling após 30 min
+    setTimeout(() => {
+        if (pixPollingInterval) clearInterval(pixPollingInterval);
+    }, 30 * 60 * 1000);
+}
+
+// ----------------- CARTÃO ----------------- //
+
+function initCardForm() {
+    if (!mpInstance) return;
+    try {
+        cardFormInstance = mpInstance.cardForm({
+            amount: String(totalCarrinho()),
+            iframe: true,
+            form: {
+                id: 'form-checkout',
+                cardNumber: { id: 'form-checkout__cardNumber', placeholder: 'Numero do cartao' },
+                expirationDate: { id: 'form-checkout__expirationDate', placeholder: 'MM/YY' },
+                securityCode: { id: 'form-checkout__securityCode', placeholder: 'CVV' },
+                cardholderName: { id: 'form-checkout__cardholderName' },
+                issuer: { id: 'form-checkout__issuer' },
+                installments: { id: 'form-checkout__installments' },
+                identificationType: { id: 'form-checkout__identificationType' },
+                identificationNumber: { id: 'form-checkout__identificationNumber' },
+            },
+            callbacks: {
+                onFormMounted: (error) => { if (error) console.error('CardForm mount error:', error); },
+                onSubmit: (event) => { event.preventDefault(); },
+                onFetching: () => { },
+            },
+        });
+    } catch (e) {
+        console.error('Erro ao inicializar CardForm:', e);
+    }
+}
+
+async function pagarComCartao() {
+    const btn = document.getElementById('btn-pagar-cartao');
+    const payErr = document.getElementById('payment-error');
+    btn.disabled = true;
+    btn.textContent = 'Processando...';
+    payErr.style.display = 'none';
+
+    try {
+        if (!cardFormInstance) throw new Error('Formulario de cartao nao inicializado.');
+
+        const cardFormData = cardFormInstance.getCardFormData();
+        if (!cardFormData.token) throw new Error('Preencha os dados do cartao corretamente.');
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-mp-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+            },
+            body: JSON.stringify({
+                customer: customerData,
+                cart_items: carrinho,
+                payment: {
+                    method: 'credit_card',
+                    token: cardFormData.token,
+                    installments: Number(cardFormData.installments) || 1,
+                    issuer_id: cardFormData.issuerId,
+                    payment_method_id: cardFormData.paymentMethodId,
+                },
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.status === 'approved') {
+            mostrarSucesso();
+        } else if (data.status === 'rejected' || !data.success) {
+            const msg = traduzirErroCartao(data.status_detail);
+            payErr.textContent = msg;
+            payErr.style.display = 'block';
+        } else {
+            // in_process / pending
+            currentPedidoId = data.pedido_id;
+            mostrarSucesso('Pagamento em processamento. Voce sera notificado por e-mail quando confirmado.');
+        }
+    } catch (e) {
+        payErr.textContent = e.message;
+        payErr.style.display = 'block';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Pagar com Cartao';
+}
+
+function traduzirErroCartao(statusDetail) {
+    const erros = {
+        'cc_rejected_bad_filled_card_number': 'Numero do cartao incorreto.',
+        'cc_rejected_bad_filled_date': 'Data de validade incorreta.',
+        'cc_rejected_bad_filled_other': 'Dados do cartao incorretos.',
+        'cc_rejected_bad_filled_security_code': 'Codigo de seguranca incorreto.',
+        'cc_rejected_blacklist': 'Pagamento nao autorizado.',
+        'cc_rejected_call_for_authorize': 'Ligue para a operadora do cartao para autorizar.',
+        'cc_rejected_card_disabled': 'Cartao desabilitado. Ligue para a operadora.',
+        'cc_rejected_duplicated_payment': 'Pagamento duplicado.',
+        'cc_rejected_high_risk': 'Pagamento recusado por seguranca.',
+        'cc_rejected_insufficient_amount': 'Saldo insuficiente.',
+        'cc_rejected_max_attempts': 'Limite de tentativas. Use outro cartao.',
+        'cc_rejected_other_reason': 'Pagamento nao autorizado pela operadora.',
+    };
+    return erros[statusDetail] || 'Pagamento nao aprovado. Tente novamente ou use outro metodo.';
+}
+
+// ----------------- RESULTADO DO PAGAMENTO ----------------- //
+
+function mostrarSucesso(mensagem) {
+    document.getElementById('payment-section').style.display = 'none';
+    document.getElementById('pix-qr-section').style.display = 'none';
+    document.getElementById('payment-result').style.display = 'block';
+    document.getElementById('payment-result-content').innerHTML = `
+        <div class="payment-success">
+            <div class="success-icon">&#10003;</div>
+            <h3>Pagamento Confirmado!</h3>
+            <p>${escapeHtml(mensagem || 'Suas pecas foram reservadas com sucesso.')}</p>
+            <button class="btn-primary" onclick="fecharCheckoutFinal()">Voltar para a Vitrine</button>
+        </div>`;
+    limparCarrinho();
+    carregarProdutos();
+}
+
+function mostrarErro(mensagem) {
+    document.getElementById('pix-qr-section').style.display = 'none';
+    document.getElementById('payment-result').style.display = 'block';
+    document.getElementById('payment-result-content').innerHTML = `
+        <div class="payment-error">
+            <div class="error-icon">&#10007;</div>
+            <h3>Pagamento nao concluido</h3>
+            <p>${escapeHtml(mensagem)}</p>
+            <button class="btn-primary" onclick="fecharCheckoutFinal()">Tentar Novamente</button>
+        </div>`;
+    carregarProdutos();
+}
+
+function fecharCheckoutFinal() {
+    fecharCheckout();
+    cardFormInstance = null;
 }

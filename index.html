@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' https://*.supabase.co https://via.placeholder.com data:; connect-src https://*.supabase.co https://viacep.com.br;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://sdk.mercadopago.com https://http2.mlstatic.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' https://*.supabase.co https://via.placeholder.com data:; connect-src https://*.supabase.co https://viacep.com.br https://api.mercadopago.com https://events.mercadopago.com https://http2.mlstatic.com; frame-src https://api.mercadopago.com https://http2.mlstatic.com;">
     <title>Garimpo da Moda | Bazar Exclusivo</title>
     <meta name="description" content="Garimpo da Moda - Bazar online de peças únicas com curadoria exclusiva. Enviamos para todo o Brasil.">
     <meta property="og:title" content="Garimpo da Moda | Bazar Exclusivo">
@@ -18,9 +18,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <!-- Estilo Principal -->
     <link rel="stylesheet" href="style.css">
-    <!-- SDK Supabase -->
+    <!-- SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="app.js?v=11" defer></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script src="app.js?v=12" defer></script>
 </head>
 <body>
 
@@ -151,6 +152,84 @@
                 </button>
                 <div id="checkout-error" class="error-msg"></div>
             </form>
+
+            <!-- Seleção de Método de Pagamento (aparece após validar dados) -->
+            <div id="payment-section" style="display:none;">
+                <h3 class="payment-title">Escolha como pagar</h3>
+                <div class="payment-methods">
+                    <button type="button" class="payment-method-btn active" data-method="pix" onclick="selecionarMetodoPagamento('pix')">
+                        <svg width="20" height="20" viewBox="0 0 512 512"><path fill="currentColor" d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 372.5 391.5 392.6 391.5H407.7L293.6 505.6C263.8 535.5 215.1 535.5 185.3 505.6L71.21 391.5H124.4C144.5 391.5 163.3 383.7 177.5 369.5L242.4 292.5zM262.5 218.9C257.1 224.4 247.8 224.4 242.4 218.9L177.5 141.9C163.3 127.7 144.5 119.9 124.4 119.9H71.21L185.3 5.861C215.1-23.94 263.8-23.94 293.6 5.861L407.7 119.9H392.6C372.5 119.9 353.7 127.7 339.5 141.9L262.5 218.9zM462.1 119.9H462.1L505.6 163.4C535.5 193.2 535.5 241.9 505.6 271.8L462.1 315.2H462.1C442 315.2 423.2 307.4 409 293.2L332 216.2C314.2 198.4 287.1 192.3 262.5 199.3C237.9 192.3 210.8 198.4 193 216.2L116 293.2C101.8 307.4 82.97 315.2 62.88 315.2H49.93L5.861 271.8C-23.94 241.9-23.94 193.2 5.861 163.4L49.93 119.9H62.88C82.97 119.9 101.8 127.7 116 141.9L193 218.9C210.8 236.7 237.9 242.8 262.5 235.8C287.1 242.8 314.2 236.7 332 218.9L409 141.9C423.2 127.7 442 119.9 462.1 119.9z"/></svg>
+                        PIX
+                    </button>
+                    <button type="button" class="payment-method-btn" data-method="credit_card" onclick="selecionarMetodoPagamento('credit_card')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        Cartao
+                    </button>
+                </div>
+
+                <!-- PIX -->
+                <div id="pix-section">
+                    <p class="payment-hint">Pague instantaneamente via PIX. O QR Code sera gerado na hora.</p>
+                    <button type="button" class="btn-primary" id="btn-pagar-pix" onclick="pagarComPix()">
+                        Gerar QR Code PIX
+                    </button>
+                </div>
+
+                <!-- Cartao -->
+                <div id="card-section" style="display:none;">
+                    <div id="form-checkout">
+                        <div class="input-group">
+                            <label>Numero do Cartao</label>
+                            <div id="form-checkout__cardNumber" class="mp-input"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label>Validade</label>
+                                <div id="form-checkout__expirationDate" class="mp-input"></div>
+                            </div>
+                            <div class="form-col">
+                                <label>CVV</label>
+                                <div id="form-checkout__securityCode" class="mp-input"></div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Nome no Cartao</label>
+                            <input type="text" id="form-checkout__cardholderName" placeholder="Como aparece no cartao">
+                        </div>
+                        <div class="input-group">
+                            <label>Parcelas</label>
+                            <select id="form-checkout__installments" class="mp-select"></select>
+                        </div>
+                        <select id="form-checkout__issuer" style="display:none;"></select>
+                        <input type="hidden" id="form-checkout__identificationType" value="CPF">
+                        <input type="hidden" id="form-checkout__identificationNumber">
+                        <button type="button" class="btn-primary" id="btn-pagar-cartao" onclick="pagarComCartao()">
+                            Pagar com Cartao
+                        </button>
+                    </div>
+                </div>
+
+                <div id="payment-error" class="error-msg"></div>
+            </div>
+
+            <!-- QR Code PIX -->
+            <div id="pix-qr-section" style="display:none;">
+                <div class="pix-qr-container">
+                    <h3>Escaneie o QR Code</h3>
+                    <img id="pix-qr-image" src="" alt="QR Code PIX" class="pix-qr-img">
+                    <p class="payment-hint">Ou copie o codigo abaixo e cole no app do seu banco:</p>
+                    <div class="pix-copy-area">
+                        <input type="text" id="pix-code" readonly class="pix-code-input">
+                        <button type="button" class="btn-copy" onclick="copiarCodigoPix()">Copiar</button>
+                    </div>
+                    <div id="pix-status" class="pix-status">Aguardando pagamento...</div>
+                </div>
+            </div>
+
+            <!-- Resultado do Pagamento -->
+            <div id="payment-result" style="display:none;">
+                <div id="payment-result-content"></div>
+            </div>
         </div>
     </div>
 
