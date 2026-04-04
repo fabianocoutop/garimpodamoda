@@ -80,7 +80,9 @@ serve(async (req) => {
 
     let valorFrete = 30.00 // fallback
 
-    if (cep_destino && shipping_method) {
+    if (shipping_method === 'RETIRADA') {
+      valorFrete = 0
+    } else if (cep_destino && shipping_method) {
       const prefix = cep_destino.replace(/\D/g, '').substring(0, 2)
       const region = REGIONS.find(r => r.prefixes.includes(prefix)) || REGIONS[REGIONS.length - 1]
       const kgExtra = Math.max(0, Math.ceil(pesoTotal) - 1)

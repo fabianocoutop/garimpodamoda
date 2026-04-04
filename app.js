@@ -264,6 +264,7 @@ function calcularFreteLocal(cep) {
     const sedexPrice = region.sedex.base + (kgExtra * region.sedex.perKgExtra);
 
     return [
+        { codigo: 'RETIRADA', nome: 'Retirar no local (Sao Mateus/ES)', valor: 0, prazo: 0 },
         { codigo: 'PAC',   nome: `PAC - ${escapeHtml(region.name)}`,   valor: pacPrice,   prazo: region.pac.prazo },
         { codigo: 'SEDEX', nome: `SEDEX - ${escapeHtml(region.name)}`, valor: sedexPrice, prazo: region.sedex.prazo },
     ];
@@ -305,18 +306,21 @@ function renderizarOpcoesFrete(options) {
 
     container.innerHTML = `
         <span class="shipping-title">Escolha o Frete:</span>
-        ${options.map(opt => `
+        ${options.map(opt => {
+            const precoTxt = opt.valor === 0 ? '<strong style="color:#34d399">Grátis</strong>' : opt.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const prazoTxt = opt.prazo === 0 ? 'Combinar retirada' : `Chega em até ${opt.prazo} dias úteis`;
+            return `
             <div class="shipping-option ${opt.codigo === currentShippingMethod ? 'selected' : ''}" onclick="selecionarFrete('${opt.codigo}', ${opt.valor})">
                 <input type="radio" name="shipping" value="${opt.codigo}" ${opt.codigo === currentShippingMethod ? 'checked' : ''}>
                 <div class="shipping-info">
                     <div>
                         <div class="shipping-type">${escapeHtml(opt.nome)}</div>
-                        <div class="shipping-time">Chega em até ${opt.prazo} dias úteis</div>
+                        <div class="shipping-time">${prazoTxt}</div>
                     </div>
-                    <div class="shipping-price">${opt.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div class="shipping-price">${precoTxt}</div>
                 </div>
-            </div>
-        `).join('')}
+            </div>`;
+        }).join('')}
     `;
 
     // Mostrar a linha de frete no resumo
