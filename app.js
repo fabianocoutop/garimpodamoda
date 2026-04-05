@@ -3,6 +3,8 @@ const SUPABASE_URL = 'https://rjjbxpssymaauqzpooig.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqamJ4cHNzeW1hYXVxenBvb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjQzMDcsImV4cCI6MjA5MDc0MDMwN30.595t4Df-jcn2JkZhKWVgb5E7pOjv2hj7_5eAba3PidQ';
 
 let _supabase = null;
+let currentPage = 1;
+const ITEMS_PER_PAGE = 9;
 
 // ---- MERCADO PAGO ---- //
 const MP_PUBLIC_KEY = 'APP_USR-ab1db545-20f5-41ad-9bcf-d6c473b29380';
@@ -166,7 +168,15 @@ function renderizarVitrine(produtos) {
          return;
     }
 
-    produtos.forEach(peça => {
+    // Lógica da Paginação
+    const totalPages = Math.ceil(produtos.length / ITEMS_PER_PAGE);
+    if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const paginatedProducts = produtos.slice(start, end);
+
+    paginatedProducts.forEach(peça => {
         const precoFormatado = peça.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         let btnHtml;
@@ -196,6 +206,41 @@ function renderizarVitrine(produtos) {
         `;
         vitrine.appendChild(card);
     });
+
+    renderizarPaginacao(produtos.length);
+}
+
+function renderizarPaginacao(totalItems) {
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    let paginationContainer = document.getElementById('paginacao-vitrine');
+    
+    if (!paginationContainer) {
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'paginacao-vitrine';
+        paginationContainer.className = 'pagination';
+        const vitrine = document.getElementById('vitrine');
+        if (vitrine) vitrine.insertAdjacentElement('afterend', paginationContainer);
+    }
+
+    paginationContainer.innerHTML = '';
+
+    if (totalPages > 1) {
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.className = `btn-page ${i === currentPage ? 'active' : ''}`;
+            btn.textContent = i;
+            btn.onclick = () => {
+                currentPage = i;
+                renderizarVitrine(produtosCarregados);
+                document.getElementById('vitrine').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+            paginationContainer.appendChild(btn);
+        }
+    } else {
+        if (paginationContainer.parentNode) {
+            paginationContainer.parentNode.removeChild(paginationContainer);
+        }
+    }
 }
 
 // ----------------- MÁSCARAS E CEP ----------------- //

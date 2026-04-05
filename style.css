@@ -973,3 +973,44 @@ body {
 .summary-total .price {
     font-size: 1.2rem;
 }
+
+/* =========================================
+   PAGINAÇÃO (VITRINE)
+   ========================================= */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-page {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #E0E0E0;
+    border-radius: 50%;
+    background: var(--color-light);
+    color: var(--color-text);
+    font-family: var(--font-main);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-page:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+}
+
+.btn-page.active {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border-color: var(--color-primary);
+}
