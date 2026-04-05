@@ -688,8 +688,9 @@ function iniciarPollingPix(pedidoId) {
 function initCardForm() {
     if (!mpInstance) return;
     try {
+        const totalPagamento = totalCarrinho() + currentShippingCost;
         cardFormInstance = mpInstance.cardForm({
-            amount: String(totalCarrinho()),
+            amount: String(totalPagamento),
             iframe: true,
             form: {
                 id: 'form-checkout',
@@ -701,6 +702,14 @@ function initCardForm() {
                 installments: { id: 'form-checkout__installments' },
                 identificationType: { id: 'form-checkout__identificationType' },
                 identificationNumber: { id: 'form-checkout__identificationNumber' },
+                cardholderEmail: { id: 'email' },
+            },
+            style: {
+                input: {
+                    color: '#333333',
+                    fontSize: '16px',
+                    fontFamily: 'Inter, sans-serif'
+                }
             },
             callbacks: {
                 onFormMounted: (error) => { if (error) console.error('CardForm mount error:', error); },
