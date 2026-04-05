@@ -5,6 +5,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let _supabase = null;
 let currentPage = 1;
 const ITEMS_PER_PAGE = 9;
+let produtosFiltrados = [];
 
 // ---- MERCADO PAGO ---- //
 const MP_PUBLIC_KEY = 'APP_USR-ab1db545-20f5-41ad-9bcf-d6c473b29380';
@@ -142,6 +143,24 @@ async function initApp() {
     if (typeof MercadoPago !== 'undefined') {
         mpInstance = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
     }
+
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase().trim();
+            if (termo === '') {
+                produtosFiltrados = produtosCarregados;
+            } else {
+                produtosFiltrados = produtosCarregados.filter(p => 
+                    p.titulo.toLowerCase().includes(termo) || 
+                    (p.descricao && p.descricao.toLowerCase().includes(termo))
+                );
+            }
+            currentPage = 1; 
+            renderizarVitrine(produtosFiltrados);
+        });
+    }
+
     await carregarProdutos();
 }
 
@@ -154,7 +173,8 @@ async function carregarProdutos() {
         return;
     }
     produtosCarregados = data;
-    renderizarVitrine(data);
+    produtosFiltrados = data;
+    renderizarVitrine(produtosFiltrados);
     validarCarrinho(data);
 }
 
@@ -231,7 +251,7 @@ function renderizarPaginacao(totalItems) {
             btn.textContent = i;
             btn.onclick = () => {
                 currentPage = i;
-                renderizarVitrine(produtosCarregados);
+                renderizarVitrine(produtosFiltrados);
                 document.getElementById('vitrine').scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
             paginationContainer.appendChild(btn);

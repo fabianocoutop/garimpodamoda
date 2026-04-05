@@ -1014,3 +1014,48 @@ body {
     color: #FFFFFF;
     border-color: var(--color-primary);
 }
+
+/* === Campo de Pesquisa === */
+.search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto 2.5rem auto;
+    padding: 0 1rem;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 14px 20px 14px 48px;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--color-text);
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    outline: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+
+.search-container input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 16px rgba(201, 168, 124, 0.2);
+}
+
+.search-container input::placeholder {
+    color: #a1a1aa;
+}
+
+.search-icon {
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a1a1aa;
+    pointer-events: none;
+    transition: color 0.25s ease;
+}
+
+.search-container:focus-within .search-icon {
+    color: var(--color-primary);
+}
