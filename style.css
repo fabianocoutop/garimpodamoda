@@ -202,12 +202,11 @@ body {
 @media (max-width: 540px) {
     .overlay {
         padding: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        display: block;
+        background: var(--color-light); /* FIX DEFINITIVO: Fundo na div fixa */
     }
     .modal {
-        flex: 1 0 auto; /* Permite crescer com o conteudo indefinidamente s/ cortar fundo */
+        background: transparent; /* FIX DEFINITIVO: A modal que scrolla fica transparente */
         width: 100%;
         max-width: 100%;
         min-height: 100dvh;
@@ -216,6 +215,7 @@ body {
         padding: 1.25rem;
         padding-top: 1.5rem;
         margin: 0;
+        box-shadow: none;
     }
 }
 
