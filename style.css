@@ -202,11 +202,12 @@ body {
 @media (max-width: 540px) {
     .overlay {
         padding: 0;
-        align-items: stretch;
+        align-items: flex-start;
     }
     .modal {
         max-width: 100%;
-        min-height: 100vh;
+        min-height: 100dvh;
+        height: max-content;
         border-radius: 0;
         padding: 1.25rem;
         padding-top: 1.5rem;
@@ -410,9 +411,9 @@ body {
     position: fixed;
     top: 0;
     right: 0;
+    bottom: 0;
     width: 380px;
     max-width: 90vw;
-    height: 100vh;
     background: var(--color-light);
     z-index: 1100;
     display: flex;
