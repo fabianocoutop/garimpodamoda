@@ -202,12 +202,12 @@ body {
 @media (max-width: 540px) {
     .overlay {
         padding: 0;
-        align-items: flex-start;
+        display: block; /* Remove o flex para consertar bug de altura em celulares */
     }
     .modal {
         max-width: 100%;
-        min-height: 100dvh;
-        height: max-content;
+        min-height: 100vh;
+        height: auto;
         border-radius: 0;
         padding: 1.25rem;
         padding-top: 1.5rem;
