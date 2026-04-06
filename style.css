@@ -42,9 +42,9 @@ body {
 }
 
 .logo-container .logo {
-    max-width: 150px;
+    max-width: 450px; /* Aumentado para preencher melhor a largura no desktop */
+    width: 100%;
     height: auto;
-    border-radius: 50%; /* Se a logo for redonda */
     object-fit: contain;
     margin-bottom: 1rem;
 }
@@ -767,7 +767,7 @@ body {
         margin-bottom: 1rem;
     }
     .logo-container .logo {
-        max-width: 100px;
+        max-width: 280px; /* Tamanho otimizado para mobile */
         margin-bottom: 0.5rem;
     }
     .subtitle {
