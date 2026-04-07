@@ -42,10 +42,11 @@ body {
 }
 
 .logo-container .logo {
-    max-width: 450px; /* Aumentado para preencher melhor a largura no desktop */
+    max-width: 180px;
     width: 100%;
     height: auto;
     object-fit: contain;
+    border-radius: 50%;
     margin-bottom: 1rem;
 }
 
@@ -796,7 +797,7 @@ body {
     .price {
         font-size: 1.15rem;
     }
-    .btn-primary, .btn-in-cart {
+    .btn-primary, .btn-in-cart, .add-to-cart-animated {
         padding: 0.85rem;
         font-size: 0.95rem;
     }
@@ -847,6 +848,152 @@ body {
     .card-img {
         height: 220px;
     }
+}
+
+/* =========================================
+   ANIMAÇÃO ADD-TO-CART (GSAP + MorphSVG)
+   ========================================= */
+.add-to-cart-animated {
+  --atc-background-default: var(--color-primary);
+  --atc-background-hover: var(--color-primary-dark);
+  --atc-background-scale: 1;
+  --atc-text-color: #fff;
+  --atc-text-o: 1;
+  --atc-text-x: 0px;
+  --atc-cart: #fff;
+  --atc-cart-x: -140px;
+  --atc-cart-y: 0px;
+  --atc-cart-rotate: 0deg;
+  --atc-cart-scale: .75;
+  --atc-cart-clip: 0px;
+  --atc-cart-clip-x: 0px;
+  --atc-cart-tick-offset: 10px;
+  --atc-cart-tick-color: #FF6B9D;
+  --atc-shirt-y: -16px;
+  --atc-shirt-scale: 0;
+  --atc-shirt-color: var(--color-primary);
+  --atc-shirt-logo: #fff;
+  --atc-shirt-second-y: 24px;
+  --atc-shirt-second-color: #fff;
+  --atc-shirt-second-logo: var(--color-primary);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  background: none;
+  border: none;
+  padding: 12px 0;
+  width: 100%;
+  max-width: 240px;
+  margin: 1rem auto 0;
+  cursor: pointer;
+  position: relative;
+  font-family: var(--font-main);
+  overflow: hidden;
+}
+.add-to-cart-animated:before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  border-radius: var(--radius-sm);
+  transition: background 0.25s;
+  background: var(--atc-background, var(--atc-background-default));
+  transform: scaleX(var(--atc-background-scale)) translateZ(0);
+}
+.add-to-cart-animated:not(.active):hover {
+  --atc-background: var(--atc-background-hover);
+}
+.add-to-cart-animated span {
+  display: block;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--atc-text-color);
+  opacity: var(--atc-text-o);
+  transform: translateX(var(--atc-text-x)) translateZ(0);
+}
+.add-to-cart-animated svg {
+  display: block;
+  width: var(--svg-width, 24px);
+  height: var(--svg-height, 24px);
+  position: var(--svg-position, relative);
+  left: var(--svg-left, 0);
+  top: var(--svg-top, 0);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.add-to-cart-animated svg path {
+  fill: var(--svg-fill, none);
+  stroke: var(--svg-stroke, none);
+  stroke-width: var(--svg-stroke-width, 2);
+}
+.add-to-cart-animated .atc-morph {
+  --svg-width: 64px;
+  --svg-height: 13px;
+  --svg-left: 50%;
+  --svg-top: -12px;
+  --svg-position: absolute;
+  --svg-fill: var(--atc-background, var(--atc-background-default));
+  transition: fill 0.25s;
+  pointer-events: none;
+  margin-left: -32px;
+}
+.add-to-cart-animated .atc-shirt,
+.add-to-cart-animated .atc-cart {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+}
+.add-to-cart-animated .atc-shirt {
+  margin: -12px 0 0 -12px;
+  top: 0;
+  transform-origin: 50% 100%;
+  transform: translateY(var(--atc-shirt-y)) scale(var(--atc-shirt-scale));
+}
+.add-to-cart-animated .atc-shirt svg {
+  --svg-fill: var(--atc-shirt-color);
+}
+.add-to-cart-animated .atc-shirt svg g {
+  --svg-fill: var(--svg-g-fill, var(--atc-shirt-logo));
+}
+.add-to-cart-animated .atc-shirt svg.second {
+  --svg-fill: var(--atc-shirt-second-color);
+  --svg-g-fill: var(--atc-shirt-second-logo);
+  --svg-position: absolute;
+  -webkit-clip-path: polygon(0 var(--atc-shirt-second-y), 24px var(--atc-shirt-second-y), 24px 24px, 0 24px);
+          clip-path: polygon(0 var(--atc-shirt-second-y), 24px var(--atc-shirt-second-y), 24px 24px, 0 24px);
+}
+.add-to-cart-animated .atc-cart {
+  --svg-width: 36px;
+  --svg-height: 26px;
+  --svg-stroke: var(--atc-cart);
+  top: 10px;
+  margin-left: -18px;
+  transform: translate(var(--atc-cart-x), var(--atc-cart-y)) rotate(var(--atc-cart-rotate)) scale(var(--atc-cart-scale)) translateZ(0);
+}
+.add-to-cart-animated .atc-cart:before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 12px;
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  background: var(--atc-cart);
+  -webkit-clip-path: polygon(0 0, 22px 0, calc(22px - var(--atc-cart-clip-x)) var(--atc-cart-clip), var(--atc-cart-clip-x) var(--atc-cart-clip));
+          clip-path: polygon(0 0, 22px 0, calc(22px - var(--atc-cart-clip-x)) var(--atc-cart-clip), var(--atc-cart-clip-x) var(--atc-cart-clip));
+}
+.add-to-cart-animated .atc-cart path.wheel {
+  --svg-stroke-width: 1.5;
+}
+.add-to-cart-animated .atc-cart path.tick {
+  --svg-stroke: var(--atc-cart-tick-color);
+  stroke-dasharray: 10px;
+  stroke-dashoffset: var(--atc-cart-tick-offset);
 }
 
 /* =========================================
