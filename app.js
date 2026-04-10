@@ -380,8 +380,8 @@ function bindAddToCartAnimations() {
                     }
                 }, {
                     '--atc-text-o': 1,
-                    '--atc-text-x': '0px',
-                    '--atc-cart-x': '-140px',
+                    '--atc-text-x': '18px',
+                    '--atc-cart-x': '-105px',
                     '--atc-cart-scale': .75,
                     duration: .25,
                     clearProps: true,
