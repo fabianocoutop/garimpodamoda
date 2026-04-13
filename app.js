@@ -255,7 +255,7 @@ function renderizarVitrine(produtos) {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <img src="${escapeHtml(peça.imagem_url)}" alt="${escapeHtml(peça.titulo)}" class="card-img" loading="lazy" onerror="this.src='https://via.placeholder.com/300x400?text=Sem+Foto'">
+            <img src="${escapeHtml(peça.imagem_url)}" alt="${escapeHtml(peça.titulo)}" class="card-img" loading="lazy" onerror="this.src='https://via.placeholder.com/300x400?text=Sem+Foto'" onclick="abrirLightbox(this.src, this.alt)" style="cursor: pointer;">
             <div class="card-body">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3 class="card-title">${escapeHtml(peça.titulo)}</h3>
@@ -1028,4 +1028,30 @@ function mostrarErro(mensagem) {
 function fecharCheckoutFinal() {
     fecharCheckout();
     cardFormInstance = null;
+}
+
+// ----------------- LIGHTBOX ----------------- //
+
+function abrirLightbox(src, alt) {
+    const overlay = document.getElementById('lightbox-overlay');
+    const img = document.getElementById('lightbox-img');
+    if (!overlay || !img) return;
+    img.src = src;
+    img.alt = alt;
+    overlay.style.display = 'flex';
+    // Pequeno delay para a transição do opacity funcionar
+    setTimeout(() => {
+        overlay.classList.add('show');
+    }, 10);
+}
+
+function fecharLightbox() {
+    const overlay = document.getElementById('lightbox-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        const img = document.getElementById('lightbox-img');
+        if (img) img.src = '';
+    }, 300); // tempo compatível com a transição do CSS
 }
