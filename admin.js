@@ -410,7 +410,9 @@ function mostrarModalFeedback(tipo, msg) {
 
 // ===== COPIAR LINK =====
 function copiarLinkProduto(id) {
-    const url = window.location.origin + window.location.pathname.replace('/admin.html', '/') + '?p=' + id;
+    let basePath = window.location.pathname.replace(/\/admin(\.html)?\/?$/, '/');
+    if (!basePath.endsWith('/')) basePath += '/';
+    const url = window.location.origin + basePath + '?p=' + id;
     
     // Check if secure context
     if (navigator.clipboard && window.isSecureContext) {
