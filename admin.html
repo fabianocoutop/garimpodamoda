@@ -671,6 +671,32 @@
     </div>
 </div>
 
+<!-- Modal Trocar Foto -->
+<div id="modal-trocar-foto" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px; text-align: center;">
+        <h2 style="margin-bottom: 16px; font-size: 1.1rem;">Trocar Foto da Peça</h2>
+        <div class="upload-area" id="modal-upload-area" style="margin-bottom: 16px;">
+            <input type="file" id="modal-foto-input" accept="image/*" onchange="previewModalFoto(this)">
+            <div class="upload-overlay">
+                <span style="color:white; font-size:0.85rem;">Escolher outra foto</span>
+            </div>
+            <div id="modal-upload-placeholder">
+                <div class="upload-icon">📷</div>
+                <p><strong>Clique para escolher a nova foto</strong></p>
+                <p>JPG, PNG ou WebP</p>
+            </div>
+            <img id="modal-foto-preview" class="preview" src="" alt="Pré-visualização da foto" style="display:none;">
+        </div>
+        <input type="hidden" id="modal-produto-id">
+        <input type="hidden" id="modal-produto-img-antiga">
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" onclick="fecharModalTrocarFoto()" class="btn-action">Cancelar</button>
+            <button type="button" id="btn-salvar-nova-foto" onclick="salvarNovaFoto()" class="btn-publish" style="margin-top: 0; width: auto; padding: 8px 16px;">Salvar Foto</button>
+        </div>
+        <div class="form-feedback" id="modal-form-feedback"></div>
+    </div>
+</div>
+
 <script>
 function toggleFormMobile() {
     const card = document.getElementById('form-card');

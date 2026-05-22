@@ -250,6 +250,8 @@ async function carregarProdutos() {
                     : `<button class="btn-action reativar" onclick="toggleDisponivel(${p.id}, true)">✅ Reativar</button>`
                 }
                 <button class="btn-action deletar" data-img="${escapeHtml(p.imagem_url || '')}" onclick="deletarProduto(${p.id}, this.dataset.img)">🗑 Apagar</button>
+                <button class="btn-action" onclick="abrirModalTrocarFoto(${p.id}, '${escapeHtml(p.imagem_url || '')}')">🖼️ Trocar Foto</button>
+                <button class="btn-action" onclick="copiarLinkProduto(${p.id})">🔗 Copiar Link</button>
             </div>
         `;
         lista.appendChild(card);
@@ -288,4 +290,137 @@ async function deletarProduto(id, imagemUrl) {
         return;
     }
     carregarProdutos();
+}
+
+// ===== TROCAR FOTO =====
+let modalFotoSelecionada = null;
+
+function previewModalFoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    modalFotoSelecionada = file;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const area = document.getElementById('modal-upload-area');
+        const placeholder = document.getElementById('modal-upload-placeholder');
+        const preview = document.getElementById('modal-foto-preview');
+
+        area.classList.add('has-image');
+        placeholder.style.display = 'none';
+        preview.style.display = 'block';
+        preview.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function abrirModalTrocarFoto(id, imagemUrlAtual) {
+    document.getElementById('modal-produto-id').value = id;
+    document.getElementById('modal-produto-img-antiga').value = imagemUrlAtual;
+    
+    // Limpar modal
+    modalFotoSelecionada = null;
+    document.getElementById('modal-foto-input').value = '';
+    document.getElementById('modal-upload-area').classList.remove('has-image');
+    document.getElementById('modal-upload-placeholder').style.display = 'block';
+    document.getElementById('modal-foto-preview').style.display = 'none';
+    document.getElementById('modal-foto-preview').src = '';
+    
+    const feedback = document.getElementById('modal-form-feedback');
+    feedback.style.display = 'none';
+    
+    // Mostrar modal
+    document.getElementById('modal-trocar-foto').style.display = 'flex';
+}
+
+function fecharModalTrocarFoto() {
+    document.getElementById('modal-trocar-foto').style.display = 'none';
+}
+
+async function salvarNovaFoto() {
+    if (!modalFotoSelecionada) {
+        mostrarModalFeedback('error', '❌ Selecione uma nova foto primeiro.');
+        return;
+    }
+
+    const id = document.getElementById('modal-produto-id').value;
+    const imagemAntiga = document.getElementById('modal-produto-img-antiga').value;
+    
+    const btn = document.getElementById('btn-salvar-nova-foto');
+    btn.innerHTML = '<div class="spinner"></div> Salvando...';
+    btn.disabled = true;
+
+    try {
+        const ext = modalFotoSelecionada.name.split('.').pop();
+        const nomeArquivo = `produto_${Date.now()}.${ext}`;
+
+        // 1. Upload da nova imagem
+        const { data: uploadData, error: uploadError } = await _supabase.storage
+            .from('produtos-imagens')
+            .upload(nomeArquivo, modalFotoSelecionada, {
+                contentType: modalFotoSelecionada.type,
+                upsert: false
+            });
+
+        if (uploadError) throw new Error('Falha no upload: ' + uploadError.message);
+
+        const { data: urlData } = _supabase.storage
+            .from('produtos-imagens')
+            .getPublicUrl(uploadData.path);
+
+        const novaImagemUrl = urlData.publicUrl;
+
+        // 2. Atualizar tabela produtos
+        const { error: updateError } = await _supabase
+            .from('produtos')
+            .update({ imagem_url: novaImagemUrl })
+            .eq('id', id);
+
+        if (updateError) throw new Error('Erro ao atualizar produto: ' + updateError.message);
+
+        // 3. Apagar imagem antiga
+        if (imagemAntiga && imagemAntiga.includes('produtos-imagens')) {
+            const path = imagemAntiga.split('/produtos-imagens/')[1];
+            if (path) {
+                await _supabase.storage.from('produtos-imagens').remove([path]);
+            }
+        }
+
+        mostrarModalFeedback('success', '✅ Foto atualizada com sucesso!');
+        setTimeout(() => {
+            fecharModalTrocarFoto();
+            carregarProdutos();
+        }, 1500);
+
+    } catch (e) {
+        mostrarModalFeedback('error', '❌ ' + e.message);
+    }
+
+    btn.innerHTML = 'Salvar Foto';
+    btn.disabled = false;
+}
+
+function mostrarModalFeedback(tipo, msg) {
+    const el = document.getElementById('modal-form-feedback');
+    el.textContent = msg;
+    el.className = 'form-feedback ' + tipo;
+    el.style.display = 'block';
+}
+
+// ===== COPIAR LINK =====
+function copiarLinkProduto(id) {
+    const url = window.location.origin + window.location.pathname.replace('/admin.html', '/') + '?p=' + id;
+    
+    // Check if secure context
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Link copiado para a área de transferência:\n' + url);
+        }).catch(err => {
+            prompt('Copie o link abaixo:', url);
+        });
+    } else {
+        // Fallback
+        prompt('Copie o link abaixo (Ctrl+C ou Cmd+C):', url);
+    }
 }

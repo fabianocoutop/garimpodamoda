@@ -173,7 +173,26 @@ async function carregarProdutos() {
         return;
     }
     produtosCarregados = data;
-    produtosFiltrados = data;
+    produtosFiltrados = [...data]; // cópia para evitar reordenação permanente do array original
+
+    // Verificar se há link direto para uma peça
+    const urlParams = new URLSearchParams(window.location.search);
+    const linkedProductId = urlParams.get('p');
+    if (linkedProductId) {
+        const pIdStr = String(linkedProductId);
+        const linkedProduct = produtosFiltrados.find(p => String(p.id) === pIdStr);
+        if (linkedProduct) {
+            linkedProduct.isHighlighted = true;
+            produtosFiltrados = produtosFiltrados.filter(p => String(p.id) !== pIdStr);
+            produtosFiltrados.unshift(linkedProduct);
+            
+            setTimeout(() => {
+                const vitrineEl = document.getElementById('vitrine');
+                if (vitrineEl) vitrineEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 600);
+        }
+    }
+
     renderizarVitrine(produtosFiltrados);
     validarCarrinho(data);
 }
@@ -253,7 +272,7 @@ function renderizarVitrine(produtos) {
         }
 
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card' + (peça.isHighlighted ? ' highlighted-product' : '');
         card.innerHTML = `
             <img src="${escapeHtml(peça.imagem_url)}" alt="${escapeHtml(peça.titulo)}" class="card-img" loading="lazy" onerror="this.src='https://via.placeholder.com/300x400?text=Sem+Foto'" onclick="abrirLightbox(this.src, this.alt)" style="cursor: pointer;">
             <div class="card-body">
